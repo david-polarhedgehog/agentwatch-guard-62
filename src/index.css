@@ -1,0 +1,221 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* AI Agent Security Monitoring Dashboard Design System */
+
+@layer base {
+  :root {
+    /* Modern neutral palette */
+    --background: 0 0% 100%;
+    --foreground: 220 13% 18%;
+    --surface: 0 0% 100%;
+    
+    /* Brand colors - blue theme from Figma */
+    --primary: 234 89% 74%;
+    --primary-foreground: 0 0% 100%;
+    --primary-muted: 234 89% 95%;
+    
+    /* Neutral grays */
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 234 89% 74%;
+    
+    /* Card and surfaces */
+    --card: 0 0% 100%;
+    --card-foreground: 220 13% 18%;
+    
+    /* Secondary colors */
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 13% 18%;
+    
+    /* Accent */
+    --accent: 220 14% 96%;
+    --accent-foreground: 220 13% 18%;
+    
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    /* Status colors for badges */
+    --status-critical: 0 84% 60%;
+    --status-high: 0 84% 60%;
+    --status-medium: 38 92% 55%;
+    --status-low: 104 76% 60%;
+    --status-open: 104 76% 60%;
+    --status-resolved: 234 89% 74%;
+    --status-progress: 266 100% 47%;
+    
+    /* Type badges */
+    --type-compliance: 266 100% 47%;
+    --type-threat: 174 72% 56%;
+    --type-access: 234 89% 74%;
+    
+    /* Agent color scheme */
+    --user: 220 70% 50%;
+    --user-foreground: 0 0% 100%;
+    --customer-service: 262 83% 58%;
+    --customer-service-foreground: 0 0% 100%;
+    --file-system: 173 58% 39%;
+    --file-system-foreground: 0 0% 100%;
+    --web-search: 197 37% 24%;
+    --web-search-foreground: 0 0% 100%;
+    --summarizer: 43 74% 66%;
+    --summarizer-foreground: 220 13% 18%;
+    --tool-call: 27 87% 67%;
+    --tool-call-foreground: 220 13% 18%;
+    --default: 220 14% 96%;
+    --default-foreground: 220 13% 18%;
+    
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 215 25% 8%;
+    --foreground: 0 0% 95%;
+    --surface: 215 25% 10%;
+    
+    --agent-blue: 211 86% 65%;
+    --session-green: 104 76% 65%;
+    --user-purple: 266 100% 52%;
+    --assistant-cyan: 174 72% 61%;
+    --tool-light-green: 92 70% 75%;
+    
+    --severity-high: 0 85% 65%;
+    --severity-medium: 38 92% 60%;
+    --severity-low: 104 76% 65%;
+    
+    --card: 215 25% 10%;
+    --card-foreground: 0 0% 95%;
+    
+    --primary: 211 86% 65%;
+    --primary-foreground: 215 25% 8%;
+    
+    --secondary: 215 25% 15%;
+    --secondary-foreground: 0 0% 95%;
+    
+    --muted: 215 25% 15%;
+    --muted-foreground: 215 15% 65%;
+    
+    --accent: 215 25% 18%;
+    --accent-foreground: 0 0% 95%;
+    
+    --destructive: 0 85% 65%;
+    --destructive-foreground: 0 0% 95%;
+    
+    --border: 215 25% 20%;
+    --input: 215 25% 20%;
+    --ring: 211 86% 65%;
+    
+    --success: 104 76% 65%;
+    --warning: 38 92% 60%;
+    --error: 0 85% 65%;
+    --info: 211 86% 65%;
+    
+    /* Agent color scheme - dark mode */
+    --user: 220 70% 60%;
+    --user-foreground: 215 25% 8%;
+    --customer-service: 262 83% 68%;
+    --customer-service-foreground: 215 25% 8%;
+    --file-system: 173 58% 49%;
+    --file-system-foreground: 215 25% 8%;
+    --web-search: 197 37% 34%;
+    --web-search-foreground: 0 0% 95%;
+    --summarizer: 43 74% 76%;
+    --summarizer-foreground: 215 25% 8%;
+    --tool-call: 27 87% 77%;
+    --tool-call-foreground: 215 25% 8%;
+    --default: 215 25% 25%;
+    --default-foreground: 0 0% 95%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  .font-mono {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Severity indicator styles */
+  .severity-high {
+    @apply bg-red-500/10 text-red-700 border-red-200;
+  }
+  
+  .severity-medium {
+    @apply bg-orange-500/10 text-orange-700 border-orange-200;
+  }
+  
+  .severity-low {
+    @apply bg-green-500/10 text-green-700 border-green-200;
+  }
+  
+  /* Entity type styles */
+  .entity-agent {
+    @apply bg-blue-500/10 text-blue-700 border-blue-200;
+  }
+  
+  .entity-session {
+    @apply bg-green-500/10 text-green-700 border-green-200;
+  }
+  
+  .entity-user {
+    @apply bg-purple-500/10 text-purple-700 border-purple-200;
+  }
+  
+  .entity-assistant {
+    @apply bg-cyan-500/10 text-cyan-700 border-cyan-200;
+  }
+  
+  /* Animation utilities */
+  .animate-pulse-ring {
+    animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse-ring {
+    0%, 100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.7;
+    }
+  }
+  
+  @keyframes subtle-glow {
+    0% {
+      box-shadow: 0 0 20px hsl(var(--destructive) / 0.6), 0 0 40px hsl(var(--destructive) / 0.3), 0 0 60px hsl(var(--destructive) / 0.1);
+    }
+    100% {
+      box-shadow: 0 0 30px hsl(var(--destructive) / 0.8), 0 0 60px hsl(var(--destructive) / 0.5), 0 0 90px hsl(var(--destructive) / 0.2);
+    }
+  }
+}
+
+@layer utilities {
+  .transition-colors-fast {
+    transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
+  }
+  
+  .transition-all-normal {
+    transition: all var(--transition-normal);
+  }
+  
+  .shadow-glow {
+    box-shadow: var(--shadow-glow);
+  }
+}
