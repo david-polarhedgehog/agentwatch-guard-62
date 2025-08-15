@@ -13,7 +13,7 @@ import type {
   Pagination
 } from '@/types';
 
-const API_BASE_URL = 'https://tryme.tendry.net:8080/api/v1';
+const API_BASE_URL = 'https://lac.tendry.net:8080/api/v1';
 
 // Create axios instance with default config
 const apiClient = axios.create({

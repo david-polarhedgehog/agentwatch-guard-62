@@ -1,6 +1,6 @@
 import { SessionSummary, ApiSessionResponse } from '@/types/session';
 
-const API_BASE_URL = 'https://tryme.tendry.net:8080';
+const API_BASE_URL = 'https://lac.tendry.net:8080';
 
 export async function getSessions(): Promise<SessionSummary[]> {
   try {
