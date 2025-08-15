@@ -138,14 +138,7 @@ function ToolCard({
           {detailsLoading && <LoadingSpinner text="Loading tool details..." />}
           
           {/* Show schema from basic tool data first */}
-          {tool.schema && <div>
-              <h4 className="font-medium mb-2">Tool Schema</h4>
-              <div className="bg-muted p-4 rounded-lg">
-                <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
-                  {JSON.stringify(tool.schema, null, 2)}
-                </pre>
-              </div>
-            </div>}
+          {tool.schema}
           
           {toolDetails && <>
               {/* Additional schema from detailed endpoint if different */}
@@ -178,43 +171,9 @@ function ToolCard({
 
               {/* Recent Runs */}
               {toolDetails.recent_runs?.length > 0 && <div>
-                  <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    Recent Runs
-                  </h4>
+                  
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {toolDetails.recent_runs.slice(0, 5).map((run: any, index: number) => <div key={`${run.execution_id || index}`} className="p-3 border rounded text-sm">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center gap-2">
-                            {run.success ? <CheckCircle className="h-4 w-4 text-status-open" /> : <XCircle className="h-4 w-4 text-destructive" />}
-                            <span className="font-medium">
-                              {run.success ? 'Success' : 'Failed'}
-                            </span>
-                            <Badge variant="outline" className="text-xs">
-                              {run.duration}ms
-                            </Badge>
-                          </div>
-                          <span className="text-muted-foreground text-xs">
-                            {formatDateTime(run.timestamp)}
-                          </span>
-                        </div>
-                        
-                        {run.input_parameters && <div className="mt-2">
-                            <p className="text-muted-foreground text-xs mb-1">Input:</p>
-                            <code className="text-xs bg-muted p-1 rounded block break-all">
-                              {JSON.stringify(run.input_parameters).slice(0, 200)}
-                              {JSON.stringify(run.input_parameters).length > 200 && '...'}
-                            </code>
-                          </div>}
-                        
-                        {run.success && run.output_result && <div className="mt-2">
-                            <p className="text-muted-foreground text-xs mb-1">Output:</p>
-                            <code className="text-xs bg-muted p-1 rounded block break-all">
-                              {typeof run.output_result === 'string' ? run.output_result.slice(0, 200) : JSON.stringify(run.output_result).slice(0, 200)}
-                              {(typeof run.output_result === 'string' ? run.output_result.length : JSON.stringify(run.output_result).length) > 200 && '...'}
-                            </code>
-                          </div>}
-                      </div>)}
+                    {toolDetails.recent_runs.slice(0, 5).map((run: any, index: number) => {})}
                   </div>
                 </div>}
 
