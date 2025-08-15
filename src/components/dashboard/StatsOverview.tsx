@@ -1,6 +1,7 @@
-import { Bot, MessageSquare, AlertTriangle, Activity } from 'lucide-react';
+import { Bot, MessageSquare, AlertTriangle } from 'lucide-react';
 import { StatsCard } from '@/components/ui/stats-card';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
+import { SessionsOvertimeGraph } from './SessionsOvertimeGraph';
 import { useStats } from '@/hooks/useReactQuery';
 import { formatNumber } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
@@ -10,12 +11,6 @@ export function StatsOverview() {
   const { data: stats, isLoading, error } = useStats();
   const navigate = useNavigate();
 
-  // Helper function to calculate sessions created today (placeholder)
-  const getSessionsToday = (stats: SystemStats): number => {
-    // Since we don't have daily session data from the API, we'll show a placeholder
-    // In a real implementation, this would filter sessions by created_at date
-    return Math.floor(stats.sessions_count * 0.1); // Assume 10% of sessions were created today
-  };
 
   // Debug logging for stats
   console.log('📊 Stats Debug:', { stats, isLoading, error });
@@ -59,13 +54,7 @@ export function StatsOverview() {
         variant="default"
       />
       
-      <StatsCard
-        title="Sessions Today"
-        value={formatNumber(getSessionsToday(stats))}
-        subtitle={`of ${formatNumber(stats.sessions_count)} total`}
-        icon={Activity}
-        variant="success"
-      />
+      <SessionsOvertimeGraph totalSessions={stats.sessions_count} />
       
       <div onClick={() => navigate('/sessions')} className="cursor-pointer">
         <StatsCard
