@@ -65,6 +65,11 @@ export interface Detection {
   response_id?: string; // Add this property
   violation_confidence?: number;
   violation_description?: string;
+  mitigation_suggestion?: Record<string, {
+    code_suggestion: string;
+    configuration_suggestion: string;
+    active_guardrails: string;
+  }>;
 }
 
 export interface Message {

@@ -16,15 +16,15 @@ export default function ViolationDetail() {
   const { violationId } = useParams();
   const navigate = useNavigate();
 
-  // Fetch all detections and find the specific one by ID (API doesn't have individual detection endpoint)
-  const { data: detectionsData, isLoading, error } = useQuery({
-    queryKey: ['detections-all'],
-    queryFn: () => detectionsApi.list({ limit: 100 }), // API max limit is 100
+  // Fetch violation details including mitigation suggestions
+  const { data: violationDetailsData, isLoading, error } = useQuery({
+    queryKey: ['violation-details', violationId],
+    queryFn: () => detectionsApi.getViolationDetails(Number(violationId!)),
     retry: false,
+    enabled: !!violationId,
   });
 
-  // Find the specific violation from the list
-  const violation = detectionsData?.detections?.find(d => d.id === Number(violationId));
+  const violation = violationDetailsData?.violation;
 
   // Fetch complete session data
   const { data: completeSessionData } = useQuery({
@@ -178,7 +178,7 @@ export default function ViolationDetail() {
                 <span className="text-sm font-medium">Severity</span>
               </div>
               <div className="mt-1">
-                <SeverityBadge severity={violation.severity as any} />
+                <SeverityBadge severity={violation.severity} />
               </div>
             </CardContent>
           </Card>
@@ -246,6 +246,50 @@ export default function ViolationDetail() {
             </p>
           </CardContent>
         </Card>
+
+        {/* Mitigation Suggestion */}
+        {violation.mitigation_suggestion && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Mitigation Suggestion</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {Object.entries(violation.mitigation_suggestion).map(([key, suggestions]) => (
+                <div key={key} className="border rounded-lg p-4">
+                  <h4 className="font-medium text-sm mb-3 capitalize">
+                    {key.replace(/_/g, ' ')}
+                  </h4>
+                  <div className="grid gap-3">
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Code Suggestion
+                      </span>
+                      <p className="text-sm mt-1">
+                        {(suggestions as any).code_suggestion}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Configuration Suggestion
+                      </span>
+                      <p className="text-sm mt-1">
+                        {(suggestions as any).configuration_suggestion}
+                      </p>
+                    </div>
+                    <div>
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Active Guardrails
+                      </span>
+                      <p className="text-sm mt-1">
+                        {(suggestions as any).active_guardrails}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
         {/* Detected Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
