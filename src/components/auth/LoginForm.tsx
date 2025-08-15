@@ -10,9 +10,8 @@ import { useToast } from '@/hooks/use-toast';
 export function LoginForm() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -21,9 +20,7 @@ export function LoginForm() {
     setLoading(true);
 
     try {
-      const { error } = isSignUp 
-        ? await signUp(email, password)
-        : await signIn(email, password);
+      const { error } = await signIn(email, password);
 
       if (error) {
         toast({
@@ -32,14 +29,7 @@ export function LoginForm() {
           variant: "destructive",
         });
       } else {
-        if (isSignUp) {
-          toast({
-            title: "Account Created",
-            description: "Please check your email to verify your account.",
-          });
-        } else {
-          navigate('/');
-        }
+        navigate('/');
       }
     } catch (error) {
       toast({
@@ -57,13 +47,10 @@ export function LoginForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl text-center">
-            {isSignUp ? 'Create Account' : 'Sign In'}
+            Sign In
           </CardTitle>
           <CardDescription className="text-center">
-            {isSignUp 
-              ? 'Enter your details to create a new account'
-              : 'Enter your credentials to access the dashboard'
-            }
+            Enter your credentials to access the dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -91,21 +78,9 @@ export function LoginForm() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Loading...' : (isSignUp ? 'Create Account' : 'Sign In')}
+              {loading ? 'Loading...' : 'Sign In'}
             </Button>
           </form>
-          <div className="mt-4 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-muted-foreground hover:text-foreground underline"
-            >
-              {isSignUp 
-                ? 'Already have an account? Sign in'
-                : "Don't have an account? Create one"
-              }
-            </button>
-          </div>
         </CardContent>
       </Card>
     </div>
