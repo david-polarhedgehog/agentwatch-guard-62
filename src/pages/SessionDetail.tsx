@@ -107,7 +107,7 @@ export default function SessionDetail() {
   const traceId = searchParams.get('traceId');
   const messageIndex = searchParams.get('messageIndex');
   const [activeTab, setActiveTab] = useState('replay');
-  
+
   // Clear traceId and messageIndex after initial load to allow normal event selection
   React.useEffect(() => {
     if (traceId || messageIndex) {
@@ -115,9 +115,11 @@ export default function SessionDetail() {
         const newSearchParams = new URLSearchParams(searchParams);
         newSearchParams.delete('traceId');
         newSearchParams.delete('messageIndex');
-        setSearchParams(newSearchParams, { replace: true });
+        setSearchParams(newSearchParams, {
+          replace: true
+        });
       }, 5000); // Clear after 5 seconds to allow time for navigation
-      
+
       return () => clearTimeout(timer);
     }
   }, [traceId, messageIndex, searchParams, setSearchParams]);
@@ -144,20 +146,20 @@ export default function SessionDetail() {
   // Extract agent IDs from session data - include all sources
   const extractInvolvedAgentIds = () => {
     const agentIds = new Set<string>();
-    
+
     // Primary agent
     const primaryAgentId = session?.agent_id || session?.primary_agent_id;
     if (primaryAgentId) {
       agentIds.add(primaryAgentId);
     }
-    
+
     // From agent_names field (most comprehensive)
     if (session?.agent_names) {
       Object.keys(session.agent_names).forEach(agentId => {
         agentIds.add(agentId);
       });
     }
-    
+
     // From agent_responses (extract agent from response metadata)
     if (session?.agent_responses) {
       session.agent_responses.forEach((response: any) => {
@@ -166,7 +168,7 @@ export default function SessionDetail() {
         }
       });
     }
-    
+
     // From chat_history metadata if available
     if (session?.chat_history) {
       session.chat_history.forEach((message: any) => {
@@ -175,12 +177,12 @@ export default function SessionDetail() {
         }
       });
     }
-    
     return Array.from(agentIds);
   };
-
   const involvedAgentIds = extractInvolvedAgentIds();
-  const { agentsDisplayInfo } = useAgentsDisplayInfo(involvedAgentIds);
+  const {
+    agentsDisplayInfo
+  } = useAgentsDisplayInfo(involvedAgentIds);
 
   // Extract all involved agents from all available sources
   const extractInvolvedAgents = () => {
@@ -190,7 +192,7 @@ export default function SessionDetail() {
     const getAgentDisplayInfo = (agentId: string) => {
       // Try to get name from agent_names field first, then fallback to agent ID
       const displayName = session?.agent_names?.[agentId] || agentId;
-      
+
       // Color coding for different agent types
       let className = 'cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs max-w-full';
       if (displayName.toLowerCase().includes('customer service')) {
@@ -198,7 +200,6 @@ export default function SessionDetail() {
       } else if (displayName.toLowerCase().includes('file system')) {
         className = 'cursor-pointer hover:bg-green-600 hover:text-white transition-colors text-xs max-w-full bg-green-100 text-green-700 border-green-200';
       }
-      
       return {
         cleanName: displayName,
         variant: 'secondary' as const,
@@ -220,11 +221,10 @@ export default function SessionDetail() {
         agentsMap.set(agentId, agentData);
       }
     });
-    
     return Array.from(agentsMap.values());
   };
   const involvedAgents = extractInvolvedAgents();
-  
+
   // Debug logging for agent information
   console.log('🔍 SessionDetail Debug:', {
     session: session,
@@ -341,8 +341,7 @@ export default function SessionDetail() {
                 </CardHeader>
                 <CardContent className="h-full overflow-y-auto">
                   <div className="space-y-3 pb-6">
-                     {messagesData?.messages?.map(message => (
-                       <div key={message.message_id} className={`flex gap-3 p-3 rounded-lg border border-border`}>
+                     {messagesData?.messages?.map(message => <div key={message.message_id} className={`flex gap-3 p-3 rounded-lg border border-border`}>
                          <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === 'user' ? 'bg-primary/10' : 'bg-muted'}`}>
                            {message.role === 'user' ? <User className="h-3 w-3 text-primary" /> : <Bot className="h-3 w-3 text-muted-foreground" />}
                          </div>
@@ -361,8 +360,7 @@ export default function SessionDetail() {
                              {message.content || 'No content available'}
                            </p>
                          </div>
-                       </div>
-                     ))}
+                       </div>)}
                     
                     {/* Empty state */}
                     {(!messagesData?.messages || messagesData.messages.length === 0) && <div className="text-center py-8 text-muted-foreground">
@@ -384,22 +382,19 @@ export default function SessionDetail() {
                 <CardContent className="h-full overflow-y-auto">
                   <div className="space-y-3">
                     {(sessionViolations?.detections || sessionDetections?.detections)?.map((detection: any) => {
-                      // Ensure we have a valid detection ID for navigation
-                      const detectionId = detection.id || detection.detection_id || detection.violation_id;
-                      console.log('Violation detection:', { detection, detectionId });
-                      
-                      return (
-                        <div 
-                          key={detectionId || `detection-${Math.random()}`} 
-                          className="flex gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-accent transition-colors"
-                          onClick={() => {
-                            if (detectionId) {
-                              navigate(`/violations?violationId=${detectionId}`);
-                            } else {
-                              console.error('No valid detection ID found for navigation:', detection);
-                            }
-                          }}
-                        >
+                    // Ensure we have a valid detection ID for navigation
+                    const detectionId = detection.id || detection.detection_id || detection.violation_id;
+                    console.log('Violation detection:', {
+                      detection,
+                      detectionId
+                    });
+                    return <div key={detectionId || `detection-${Math.random()}`} className="flex gap-3 p-3 rounded-lg border border-border cursor-pointer hover:bg-accent transition-colors" onClick={() => {
+                      if (detectionId) {
+                        navigate(`/violations?violationId=${detectionId}`);
+                      } else {
+                        console.error('No valid detection ID found for navigation:', detection);
+                      }
+                    }}>
                         <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 bg-destructive/10">
                           <AlertTriangle className="h-3 w-3 text-destructive" />
                         </div>
@@ -417,35 +412,23 @@ export default function SessionDetail() {
                             </span>
                           </div>
                           
-                          <p className="text-sm break-words whitespace-pre-wrap text-muted-foreground">
-                            {detection.context || 'No context available'}
-                          </p>
                           
-                          {detection.matches && detection.matches.length > 0 && (
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {detection.matches.slice(0, 3).map((match: string, idx: number) => (
-                                <Badge key={idx} variant="outline" className="text-xs font-mono">
+                          
+                          {detection.matches && detection.matches.length > 0 && <div className="mt-2 flex flex-wrap gap-1">
+                              {detection.matches.slice(0, 3).map((match: string, idx: number) => <Badge key={idx} variant="outline" className="text-xs font-mono">
                                   "{match}"
-                                </Badge>
-                              ))}
-                              {detection.matches.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
+                                </Badge>)}
+                              {detection.matches.length > 3 && <Badge variant="outline" className="text-xs">
                                   +{detection.matches.length - 3} more
-                                </Badge>
-                              )}
-                            </div>
-                          )}
+                                </Badge>}
+                            </div>}
                         </div>
-                      </div>
-                      );
-                    })}
+                      </div>;
+                  })}
                     
-                    {(!sessionViolations?.detections && !sessionDetections?.detections) ||
-                     ((sessionViolations?.detections || []).length === 0 && (sessionDetections?.detections || []).length === 0) ? (
-                      <div className="text-sm text-muted-foreground text-center py-4">
+                    {!sessionViolations?.detections && !sessionDetections?.detections || (sessionViolations?.detections || []).length === 0 && (sessionDetections?.detections || []).length === 0 ? <div className="text-sm text-muted-foreground text-center py-4">
                         No violations detected in this session
-                      </div>
-                    ) : null}
+                      </div> : null}
                   </div>
                 </CardContent>
               </Card>
