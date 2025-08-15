@@ -383,7 +383,7 @@ export default function Violations() {
           </div>
 
           {/* Top Pagination */}
-          {totalPages > 1 && (
+          {totalItems > itemsPerPage && (
             <div className="flex justify-center">
               <Pagination>
                 <PaginationContent>
@@ -471,7 +471,7 @@ export default function Violations() {
               {violationParam ? (
                 `Showing violation ${violationParam}`
               ) : (
-                `Showing ${filteredViolations.length} of ${totalItems} violations (page ${currentPage} of ${totalPages})`
+                `Showing ${Math.min(filteredViolations.length, itemsPerPage)} of ${totalItems} total violations (page ${currentPage} of ${totalPages})`
               )}
             </div>
             {hasActiveFilters && (
@@ -537,7 +537,7 @@ export default function Violations() {
           </div>
 
           {/* Bottom Pagination */}
-          {totalPages > 1 && (
+          {totalItems > itemsPerPage && (
             <div className="flex justify-center mt-6">
               <Pagination>
                 <PaginationContent>
