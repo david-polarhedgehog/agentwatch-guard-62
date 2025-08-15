@@ -35,16 +35,16 @@ const UserNode = ({ data }: { data: Record<string, any> }) => {
 const AgentNode = ({ data }: { data: Record<string, any> }) => {
   const nodeData = data as SystemGraphNode;
   return (
-    <div className="bg-primary/10 border-2 border-primary/20 rounded-lg p-3 min-w-[160px] max-w-[200px]">
+    <div className="bg-primary border-2 border-primary rounded-lg p-3 min-w-[160px] max-w-[200px] shadow-md">
       <div className="flex items-center gap-2 mb-1">
-        <Bot className="h-4 w-4 text-primary" />
-        <span className="text-sm font-medium text-primary">Agent</span>
+        <Bot className="h-4 w-4 text-primary-foreground" />
+        <span className="text-sm font-semibold text-primary-foreground">Agent</span>
       </div>
-      <p className="text-xs text-primary/80 font-mono truncate" title={nodeData.id}>
+      <p className="text-xs text-primary-foreground font-mono truncate" title={nodeData.id}>
         {nodeData.id.split('_').slice(-2).join('_')}
       </p>
       <div className="flex gap-1 mt-2">
-        <Badge variant="outline" className="text-xs">
+        <Badge variant="secondary" className="text-xs bg-primary-foreground/20 text-primary-foreground border-primary-foreground/30">
           {nodeData.metadata?.session_count || 0} sessions
         </Badge>
       </div>
@@ -55,13 +55,13 @@ const AgentNode = ({ data }: { data: Record<string, any> }) => {
 const ToolNode = ({ data }: { data: Record<string, any> }) => {
   const nodeData = data as SystemGraphNode;
   return (
-    <div className="bg-tool-call/10 border-2 border-tool-call/20 rounded-lg p-3 min-w-[120px]">
+    <div className="bg-tool-call border-2 border-tool-call rounded-lg p-3 min-w-[120px] shadow-md">
       <div className="flex items-center gap-2 mb-1">
-        <Wrench className="h-4 w-4 text-tool-call" />
-        <span className="text-sm font-medium text-tool-call">Tool</span>
+        <Wrench className="h-4 w-4 text-tool-call-foreground" />
+        <span className="text-sm font-semibold text-tool-call-foreground">Tool</span>
       </div>
-      <p className="text-xs text-tool-call/80 font-mono">{nodeData.label}</p>
-      <p className="text-xs text-tool-call/70 mt-1">{nodeData.metadata?.description}</p>
+      <p className="text-xs text-tool-call-foreground font-mono">{nodeData.label}</p>
+      <p className="text-xs text-tool-call-foreground/90 mt-1">{nodeData.metadata?.description}</p>
     </div>
   );
 };
@@ -119,18 +119,25 @@ export function SystemArchitectureGraph({
         animated: isHighlighted,
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+          color: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
+          width: 20,
+          height: 20,
         },
         style: {
-          stroke: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
-          strokeWidth: isHighlighted ? 3 : 2,
-          opacity: highlightedEdges.length === 0 || isHighlighted ? 1 : 0.3,
+          stroke: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
+          strokeWidth: isHighlighted ? 4 : 2,
+          opacity: highlightedEdges.length === 0 || isHighlighted ? 1 : 0.6,
           transition: 'all 0.2s ease-in-out',
         },
         label: edge.type.replace('_', ' → '),
         labelStyle: {
-          fontSize: '11px',
-          fill: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+          fontSize: '12px',
+          fontWeight: 600,
+          fill: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--foreground))',
+          backgroundColor: 'hsl(var(--background))',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          border: '1px solid hsl(var(--border))',
         },
       };
     });

@@ -116,8 +116,21 @@
     --error: 0 85% 65%;
     --info: 211 86% 65%;
     
-    /* Agent color scheme - dark mode */
-    --user: 220 70% 60%;
+    /* Agent color scheme - dark mode with better contrast */
+    --user: 220 70% 65%;
+    --user-foreground: 0 0% 100%;
+    --customer-service: 262 83% 65%;
+    --customer-service-foreground: 0 0% 100%;
+    --file-system: 142 70% 55%;
+    --file-system-foreground: 0 0% 100%;
+    --web-search: 200 60% 55%;
+    --web-search-foreground: 0 0% 100%;
+    --summarizer: 43 74% 70%;
+    --summarizer-foreground: 0 0% 100%;
+    --tool-call: 27 87% 70%;
+    --tool-call-foreground: 0 0% 100%;
+    --default: 220 14% 85%;
+    --default-foreground: 220 13% 18%;
     --user-foreground: 215 25% 8%;
     --customer-service: 262 83% 68%;
     --customer-service-foreground: 215 25% 8%;

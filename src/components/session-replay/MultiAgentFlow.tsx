@@ -229,15 +229,20 @@ const MultiAgentFlowComponent: React.FC<MultiAgentFlowProps> = ({ events, curren
         style: {
           backgroundColor: `hsl(var(--${colorClass}))`,
           color: `hsl(var(--${colorClass}-foreground))`,
-          border: '2px solid',
-          borderColor: hasViolations ? 'hsl(var(--destructive))' : isActive ? `hsl(var(--${colorClass}))` : `hsl(var(--muted))`,
-          opacity: isActive ? 1 : 0.6,
-          fontWeight: isActive ? 'bold' : 'normal',
+          border: '3px solid',
+          borderColor: hasViolations ? 'hsl(var(--destructive))' : `hsl(var(--${colorClass}))`,
+          opacity: isActive ? 1 : 0.8,
+          fontWeight: 'bold',
+          fontSize: '14px',
+          padding: '12px 16px',
+          borderRadius: '8px',
+          minWidth: '120px',
+          textAlign: 'center',
           boxShadow: shouldGlow 
             ? '0 0 20px hsl(var(--destructive) / 0.6), 0 0 40px hsl(var(--destructive) / 0.3), 0 0 60px hsl(var(--destructive) / 0.1)' 
             : hasViolations 
             ? '0 0 15px hsl(var(--destructive) / 0.4)' 
-            : 'none',
+            : '0 4px 12px rgba(0, 0, 0, 0.15)',
           animation: shouldGlow ? 'subtle-glow 3s ease-in-out infinite alternate' : 'none',
         },
         className: `transition-all duration-300 ${isActive ? 'scale-110' : 'scale-100'}`,
@@ -344,13 +349,20 @@ const MultiAgentFlowComponent: React.FC<MultiAgentFlowProps> = ({ events, curren
       style: {
         stroke: isActive 
           ? `hsl(var(--${getAgentColorClass(currentEventMatch?.direction === 'forward' ? connection.from : connection.to) || getAgentColorClass(connection.from)}))` 
-          : `hsl(var(--muted-foreground))`,
+          : `hsl(var(--foreground))`,
         strokeWidth: isActive ? 4 : 2,
-        strokeOpacity: isActive ? 1 : 0.3,
+        strokeOpacity: isActive ? 1 : 0.6,
         strokeDasharray: isActive ? '0' : '5,5',
       },
       animated: isActive,
-      markerEnd,
+      markerEnd: markerEnd || (!isGrayDotted ? {
+        type: MarkerType.ArrowClosed,
+        color: isActive 
+          ? `hsl(var(--${getAgentColorClass(currentEventMatch?.direction === 'forward' ? connection.from : connection.to) || getAgentColorClass(connection.from)}))` 
+          : `hsl(var(--foreground))`,
+        width: 20,
+        height: 20,
+      } : undefined),
     });
   });
 
