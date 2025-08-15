@@ -215,10 +215,46 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       });
     });
 
-    // Create edges based on session flow
+    // Create edges based on session flow - only show arrows for current event
     const edges: Edge[] = [];
+    const currentEvent = events[currentEventIndex];
 
-    // 1. User interactions (User <-> Agent)
+    // Helper function to check if edge should show arrow based on current event
+    const shouldShowArrow = (sourceId: string, targetId: string, edgeType: string): boolean => {
+      if (!currentEvent) return false;
+      
+      switch (currentEvent.type) {
+        case 'user_message':
+          // User asks question - show arrow from user to target agent
+          const nextResponse = events.slice(currentEventIndex + 1).find(e => e.type === 'agent_response');
+          return edgeType === 'user_interaction' && 
+                 sourceId === 'User' && 
+                 targetId === nextResponse?.agent;
+                 
+        case 'tool_call':
+          // Agent uses tool - show arrow from agent to tool
+          return edgeType === 'tool_call' && 
+                 sourceId === currentEvent.agent && 
+                 targetId === currentEvent.details?.tool_name;
+                 
+        case 'agent_response':
+          // Agent responds - show arrow from agent to user
+          return edgeType === 'user_interaction' && 
+                 sourceId === currentEvent.agent && 
+                 targetId === 'User';
+                 
+        case 'handoff':
+          // Agent handoff - show arrow from source to target agent
+          return edgeType === 'handoff' && 
+                 sourceId === currentEvent.details?.from_agent && 
+                 targetId === currentEvent.details?.to_agent;
+                 
+        default:
+          return false;
+      }
+    };
+
+    // 1. User interactions (User <-> Agent) - bidirectional connections
     const processedUserInteractions = new Set<string>();
     sessionFlow.userInteractions.forEach((interaction) => {
       const edgeKey = `User-${interaction.agent}`;
@@ -227,26 +263,34 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         
         const isActive = interaction.eventIndex <= currentEventIndex;
         const colorClass = getAgentColorClass(interaction.agent);
+        const showArrowToAgent = shouldShowArrow('User', interaction.agent, 'user_interaction');
+        const showArrowToUser = shouldShowArrow(interaction.agent, 'User', 'user_interaction');
 
         edges.push({
           id: `user-${interaction.agent}`,
           source: 'User',
           target: interaction.agent,
           type: 'smoothstep',
-          animated: isActive,
+          animated: isActive && (showArrowToAgent || showArrowToUser),
           style: {
             stroke: `hsl(var(--${colorClass}))`,
-            strokeWidth: isActive ? 4 : 2,
-            strokeOpacity: isActive ? 1 : 0.6,
+            strokeWidth: isActive ? 3 : 2,
+            strokeOpacity: isActive ? 1 : 0.4,
           },
-          markerEnd: {
+          markerEnd: showArrowToAgent ? {
             type: MarkerType.ArrowClosed,
             color: `hsl(var(--${colorClass}))`,
             width: 20,
             height: 20,
-          },
-          label: 'conversation',
-          labelStyle: {
+          } : undefined,
+          markerStart: showArrowToUser ? {
+            type: MarkerType.ArrowClosed,
+            color: `hsl(var(--${colorClass}))`,
+            width: 20,
+            height: 20,
+          } : undefined,
+          label: isActive ? 'conversation' : undefined,
+          labelStyle: isActive ? {
             fontSize: '12px',
             fontWeight: 600,
             fill: `hsl(var(--${colorClass}))`,
@@ -254,7 +298,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
             padding: '2px 6px',
             borderRadius: '4px',
             border: '1px solid hsl(var(--border))',
-          },
+          } : undefined,
         });
       }
     });
@@ -263,27 +307,28 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     sessionFlow.handoffs.forEach((handoff, index) => {
       const isActive = handoff.eventIndex <= currentEventIndex;
       const colorClass = getAgentColorClass(handoff.from);
+      const showArrow = shouldShowArrow(handoff.from, handoff.to, 'handoff');
 
       edges.push({
         id: `handoff-${index}`,
         source: handoff.from,
         target: handoff.to,
         type: 'smoothstep',
-        animated: isActive,
+        animated: isActive && showArrow,
         style: {
           stroke: `hsl(var(--${colorClass}))`,
-          strokeWidth: isActive ? 5 : 3,
-          strokeOpacity: isActive ? 1 : 0.6,
-          strokeDasharray: '10,5',
+          strokeWidth: isActive ? 4 : 2,
+          strokeOpacity: isActive ? 1 : 0.4,
+          strokeDasharray: showArrow ? '10,5' : undefined,
         },
-        markerEnd: {
+        markerEnd: showArrow ? {
           type: MarkerType.ArrowClosed,
           color: `hsl(var(--${colorClass}))`,
           width: 24,
           height: 24,
-        },
-        label: 'handoff',
-        labelStyle: {
+        } : undefined,
+        label: showArrow ? 'handoff' : undefined,
+        labelStyle: showArrow ? {
           fontSize: '12px',
           fontWeight: 700,
           fill: `hsl(var(--${colorClass}))`,
@@ -291,7 +336,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           padding: '4px 8px',
           borderRadius: '6px',
           border: `2px solid hsl(var(--${colorClass}))`,
-        },
+        } : undefined,
       });
     });
 
@@ -299,34 +344,35 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     sessionFlow.toolCalls.forEach((toolCall, index) => {
       const isActive = toolCall.eventIndex <= currentEventIndex;
       const colorClass = getAgentColorClass(toolCall.agent);
+      const showArrow = shouldShowArrow(toolCall.agent, toolCall.tool, 'tool_call');
 
       edges.push({
         id: `tool-${index}`,
         source: toolCall.agent,
         target: toolCall.tool,
         type: 'smoothstep',
-        animated: isActive,
+        animated: isActive && showArrow,
         style: {
           stroke: 'hsl(var(--tool-call))',
           strokeWidth: isActive ? 3 : 2,
-          strokeOpacity: isActive ? 1 : 0.5,
-          strokeDasharray: '5,3',
+          strokeOpacity: isActive ? 1 : 0.3,
+          strokeDasharray: showArrow ? '5,3' : undefined,
         },
-        markerEnd: {
+        markerEnd: showArrow ? {
           type: MarkerType.ArrowClosed,
           color: 'hsl(var(--tool-call))',
           width: 16,
           height: 16,
-        },
-        label: 'uses',
-        labelStyle: {
+        } : undefined,
+        label: showArrow ? 'uses' : undefined,
+        labelStyle: showArrow ? {
           fontSize: '10px',
           fontWeight: 500,
           fill: 'hsl(var(--tool-call))',
           backgroundColor: 'hsl(var(--background))',
           padding: '2px 4px',
           borderRadius: '4px',
-        },
+        } : undefined,
       });
     });
 
@@ -372,8 +418,14 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         <MiniMap 
           nodeColor="hsl(var(--muted))"
           maskColor="rgba(255, 255, 255, 0.8)"
-          position="bottom-right"
-          style={{ backgroundColor: 'hsl(var(--card))' }}
+          position="top-left"
+          style={{ 
+            backgroundColor: 'hsl(var(--card))',
+            width: '120px',
+            height: '80px',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '6px'
+          }}
         />
       </ReactFlow>
     </div>
