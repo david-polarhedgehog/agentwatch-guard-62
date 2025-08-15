@@ -259,40 +259,35 @@ export default function ViolationDetail() {
             <CardHeader>
               <CardTitle>Mitigation Suggestion</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {Object.entries(violation.mitigation_suggestion).map(([key, suggestions]) => (
-                <div key={key} className="border rounded-lg p-4">
-                  <h4 className="font-medium text-sm mb-3 capitalize">
-                    {key.replace(/_/g, ' ')}
-                  </h4>
-                  <div className="grid gap-3">
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Code Suggestion
-                      </span>
-                      <p className="text-sm mt-1">
-                        {(suggestions as any).code_suggestion}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Configuration Suggestion
-                      </span>
-                      <p className="text-sm mt-1">
-                        {(suggestions as any).configuration_suggestion}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                        Active Guardrails
-                      </span>
-                      <p className="text-sm mt-1">
-                        {(suggestions as any).active_guardrails}
-                      </p>
-                    </div>
+            <CardContent>
+              <div className="border rounded-lg p-4">
+                <div className="grid gap-4">
+                  <div>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Code Suggestion
+                    </span>
+                    <p className="text-sm mt-1">
+                      {violation.mitigation_suggestion.code_suggestion}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Configuration Suggestion
+                    </span>
+                    <p className="text-sm mt-1">
+                      {violation.mitigation_suggestion.configuration_suggestion}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Active Guardrails
+                    </span>
+                    <p className="text-sm mt-1">
+                      {violation.mitigation_suggestion.active_guardrails}
+                    </p>
                   </div>
                 </div>
-              ))}
+              </div>
             </CardContent>
           </Card>
         )}
