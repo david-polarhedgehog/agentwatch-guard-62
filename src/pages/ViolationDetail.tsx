@@ -1,10 +1,12 @@
 
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, AlertTriangle, Shield, Clock, User, Bot, ExternalLink } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Shield, Clock, User, Bot, ExternalLink, ChevronDown, ChevronUp } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ModernHeader } from '@/components/layout/ModernHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Badge } from '@/components/ui/badge';
 import { SeverityBadge } from '@/components/ui/severity-badge';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -15,6 +17,7 @@ import { detectionsApi, sessionsApi } from '@/lib/api';
 export default function ViolationDetail() {
   const { violationId } = useParams();
   const navigate = useNavigate();
+  const [isDebugOpen, setIsDebugOpen] = useState(false);
 
   // Fetch violation details using the violations endpoint
   const { data: violationData, isLoading, error } = useQuery({
@@ -292,19 +295,6 @@ export default function ViolationDetail() {
           </Card>
         )}
 
-        {/* Debug: Show raw mitigation data */}
-        {process.env.NODE_ENV === 'development' && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Debug: Raw Violation Data</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <pre className="text-xs overflow-auto bg-muted p-2 rounded">
-                {JSON.stringify(violation, null, 2)}
-              </pre>
-            </CardContent>
-          </Card>
-        )}
 
         {/* Detected Content */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -411,6 +401,33 @@ export default function ViolationDetail() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Debug Section - Collapsible at bottom */}
+        {process.env.NODE_ENV === 'development' && (
+          <Collapsible open={isDebugOpen} onOpenChange={setIsDebugOpen}>
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                  <CardTitle className="flex items-center justify-between">
+                    <span>Debug: Raw Violation Data</span>
+                    {isDebugOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </CardTitle>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent>
+                  <pre className="text-xs overflow-auto bg-muted p-2 rounded max-h-96">
+                    {JSON.stringify(violation, null, 2)}
+                  </pre>
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        )}
       </div>
     </MainLayout>
   );
