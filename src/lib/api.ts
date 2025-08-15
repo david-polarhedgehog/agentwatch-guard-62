@@ -269,7 +269,13 @@ export const sessionsApi = {
 
 // Detections/Violations API
 export const detectionsApi = {
-  list: async (filters?: ViolationFilters & { page?: number; per_page?: number; limit?: number }): Promise<{
+  list: async (filters?: ViolationFilters & { 
+    page?: number; 
+    per_page?: number; 
+    limit?: number;
+    sort_field?: string;
+    sort_direction?: string;
+  }): Promise<{
     detections: Detection[];
     pagination: Pagination;
   }> => {
@@ -283,6 +289,8 @@ export const detectionsApi = {
     if (filters?.agent_id) params.append('agent_id', filters.agent_id);
     if (filters?.severity) params.append('severity', filters.severity);
     if (filters?.detection_type) params.append('detection_type', filters.detection_type);
+    if (filters?.sort_field) params.append('sort_field', filters.sort_field);
+    if (filters?.sort_direction) params.append('sort_direction', filters.sort_direction);
     
     const response = await apiClient.get(`/detections?${params}`);
     return response.data;
