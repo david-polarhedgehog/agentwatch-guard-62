@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, X, Filter } from 'lucide-react';
+import { Search, X, Filter, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { MainLayout } from '@/components/layout/MainLayout';
 import { ModernHeader } from '@/components/layout/ModernHeader';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,10 @@ import { useViolations } from '@/hooks/useReactQuery';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDateTime } from '@/lib/utils';
 import type { Detection } from '@/types';
+
+type SortField = 'created_at' | 'severity';
+type SortDirection = 'asc' | 'desc';
+
 export default function Violations() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,6 +38,8 @@ export default function Violations() {
   const [timeFilter, setTimeFilter] = useState<string>('all');
   const [agentFilter, setAgentFilter] = useState<string>('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [sortField, setSortField] = useState<SortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const itemsPerPage = 20;
   
   // Get URL params for initial filters
@@ -52,7 +58,9 @@ export default function Violations() {
     ...(typeFilter !== 'all' && { detection_type: typeFilter }),
     ...(agentFilter && { agent_id: agentFilter }),
     page: currentPage,
-    per_page: itemsPerPage
+    per_page: itemsPerPage,
+    sort_field: sortField || undefined,
+    sort_direction: sortDirection
   };
   
   const {
@@ -64,8 +72,38 @@ export default function Violations() {
   const totalItems = data?.pagination?.total || 0;
   const totalPages = Math.ceil(totalItems / itemsPerPage);
 
-  // Filter violations based on search query and other filters
-  const filteredViolations = (data?.detections || []).filter((violation: Detection) => {
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('desc');
+    }
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
+  };
+
+  const getSortIcon = (field: SortField) => {
+    if (sortField !== field) {
+      return <ArrowUpDown className="ml-1 h-4 w-4" />;
+    }
+    return sortDirection === 'asc' ? 
+      <ArrowUp className="ml-1 h-4 w-4" /> : 
+      <ArrowDown className="ml-1 h-4 w-4" />;
+  };
+
+  const getSeverityValue = (severity: string) => {
+    const severityValues: Record<string, number> = {
+      'high': 3,
+      'critical': 3,
+      'medium': 2,
+      'low': 1
+    };
+    return severityValues[severity] || 0;
+  };
+
+  // Filter and sort violations
+  let filteredViolations = (data?.detections || []).filter((violation: Detection) => {
     // If a specific violation ID is in URL, show only that violation
     if (violationParam) {
       return violation.id.toString() === violationParam;
@@ -117,6 +155,33 @@ export default function Violations() {
     
     return true;
   });
+
+  // Apply client-side sorting if a sort field is selected
+  if (sortField) {
+    filteredViolations = [...filteredViolations].sort((a, b) => {
+      let aValue: any;
+      let bValue: any;
+
+      switch (sortField) {
+        case 'created_at':
+          aValue = new Date(a.created_at).getTime();
+          bValue = new Date(b.created_at).getTime();
+          break;
+        case 'severity':
+          aValue = getSeverityValue(a.severity);
+          bValue = getSeverityValue(b.severity);
+          break;
+        default:
+          return 0;
+      }
+
+      if (sortDirection === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  }
   
   // Clear filters
   const clearFilters = () => {
@@ -127,6 +192,8 @@ export default function Violations() {
     setTimeFilter('all');
     setAgentFilter('');
     setCurrentPage(1);
+    setSortField(null);
+    setSortDirection('desc');
     setSearchParams({});
   };
   
@@ -315,6 +382,89 @@ export default function Violations() {
             )}
           </div>
 
+          {/* Top Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-center">
+              <Pagination>
+                <PaginationContent>
+                  {/* Previous 5 button */}
+                  {currentPage > 5 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(Math.max(1, currentPage - 5));
+                        }}
+                      >
+                        «
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage > 1) setCurrentPage(currentPage - 1);
+                      }}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  
+                  {/* Show page numbers - limit to 5 visible pages */}
+                  {(() => {
+                    const startPage = Math.max(1, currentPage - 2);
+                    const endPage = Math.min(totalPages, startPage + 4);
+                    const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+                    
+                    return pages.map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ));
+                  })()}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      href="#"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                      }}
+                      className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  
+                  {/* Next 5 button */}
+                  {currentPage < totalPages - 4 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(Math.min(totalPages, currentPage + 5));
+                        }}
+                      >
+                        »
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
+
           {/* Results Summary */}
           <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground">
@@ -341,8 +491,24 @@ export default function Violations() {
                   <TableHead className="font-medium text-muted-foreground">NAME</TableHead>
                   <TableHead className="font-medium text-muted-foreground">ORIGIN</TableHead>
                   <TableHead className="font-medium text-muted-foreground">MESSAGE</TableHead>
-                  <TableHead className="font-medium text-muted-foreground">LAST SEEN</TableHead>
-                  <TableHead className="font-medium text-muted-foreground">SEVERITY</TableHead>
+                  <TableHead 
+                    className="font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('created_at')}
+                  >
+                    <div className="flex items-center">
+                      LAST SEEN
+                      {getSortIcon('created_at')}
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="font-medium text-muted-foreground cursor-pointer hover:bg-muted/50 select-none"
+                    onClick={() => handleSort('severity')}
+                  >
+                    <div className="flex items-center">
+                      SEVERITY
+                      {getSortIcon('severity')}
+                    </div>
+                  </TableHead>
                   <TableHead className="font-medium text-muted-foreground">CONFIDENCE</TableHead>
                 </TableRow>
               </TableHeader>
@@ -370,11 +536,26 @@ export default function Violations() {
             </Table>
           </div>
 
-          {/* Pagination */}
+          {/* Bottom Pagination */}
           {totalPages > 1 && (
             <div className="flex justify-center mt-6">
               <Pagination>
                 <PaginationContent>
+                  {/* Previous 5 button */}
+                  {currentPage > 5 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(Math.max(1, currentPage - 5));
+                        }}
+                      >
+                        «
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
+                  
                   <PaginationItem>
                     <PaginationPrevious 
                       href="#"
@@ -386,20 +567,27 @@ export default function Violations() {
                     />
                   </PaginationItem>
                   
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                    <PaginationItem key={page}>
-                      <PaginationLink
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          setCurrentPage(page);
-                        }}
-                        isActive={currentPage === page}
-                      >
-                        {page}
-                      </PaginationLink>
-                    </PaginationItem>
-                  ))}
+                  {/* Show page numbers - limit to 5 visible pages */}
+                  {(() => {
+                    const startPage = Math.max(1, currentPage - 2);
+                    const endPage = Math.min(totalPages, startPage + 4);
+                    const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+                    
+                    return pages.map((page) => (
+                      <PaginationItem key={page}>
+                        <PaginationLink
+                          href="#"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCurrentPage(page);
+                          }}
+                          isActive={currentPage === page}
+                        >
+                          {page}
+                        </PaginationLink>
+                      </PaginationItem>
+                    ));
+                  })()}
                   
                   <PaginationItem>
                     <PaginationNext 
@@ -408,9 +596,24 @@ export default function Violations() {
                         e.preventDefault();
                         if (currentPage < totalPages) setCurrentPage(currentPage + 1);
                       }}
-                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                      className={currentPage >= totalPages ? 'pointer-events-none opacity-50' : ''}
                     />
                   </PaginationItem>
+                  
+                  {/* Next 5 button */}
+                  {currentPage < totalPages - 4 && (
+                    <PaginationItem>
+                      <PaginationLink
+                        href="#"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(Math.min(totalPages, currentPage + 5));
+                        }}
+                      >
+                        »
+                      </PaginationLink>
+                    </PaginationItem>
+                  )}
                 </PaginationContent>
               </Pagination>
             </div>
