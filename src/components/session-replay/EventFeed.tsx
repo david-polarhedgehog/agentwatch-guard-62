@@ -195,12 +195,10 @@ const EventFeed: React.FC<EventFeedProps> = ({
                        </span>
                      </div>
                     
-                    {event.type === 'tool_call' ? <div className="space-y-2">
+                     {event.type === 'tool_call' ? <div className="space-y-2">
                         <p className="text-sm leading-relaxed">
-                          <span className="font-semibold text-blue-600">Using {event.content.split(' ')[1] || 'tool'}</span>
+                          <span className="font-semibold text-blue-600">Using {event.details?.tool_name || 'Normal Search'}</span>
                         </p>
-                        
-                        {event.details}
                       </div> : <div className="text-sm leading-relaxed">
                         {event.content.length > 150 ? <div>
                             <p>
