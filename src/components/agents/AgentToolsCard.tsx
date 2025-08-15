@@ -171,9 +171,44 @@ function ToolCard({
 
               {/* Recent Runs */}
               {toolDetails.recent_runs?.length > 0 && <div>
-                  
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Recent Tool Calls
+                  </h4>
                   <div className="space-y-2 max-h-60 overflow-y-auto">
-                    {toolDetails.recent_runs.slice(0, 5).map((run: any, index: number) => {})}
+                    {toolDetails.recent_runs.slice(0, 5).map((run: any, index: number) => (
+                      <div key={`run-${run.timestamp || index}`} className="p-3 border rounded-lg text-sm">
+                        <div className="flex justify-between items-start mb-2">
+                          <div className="flex items-center gap-2">
+                            {run.status === 'success' ? (
+                              <CheckCircle className="h-3 w-3 text-status-open" />
+                            ) : (
+                              <XCircle className="h-3 w-3 text-destructive" />
+                            )}
+                            <span className="font-medium capitalize">{run.status || 'Unknown'}</span>
+                          </div>
+                          <span className="text-muted-foreground text-xs">
+                            {formatDateTime(run.timestamp)}
+                          </span>
+                        </div>
+                        
+                        {run.duration_seconds && (
+                          <div className="text-xs text-muted-foreground">
+                            Duration: {Math.round(run.duration_seconds * 1000)}ms
+                          </div>
+                        )}
+                        
+                        {run.input_parameters && (
+                          <div className="mt-2">
+                            <p className="text-muted-foreground text-xs mb-1">Input:</p>
+                            <code className="text-xs bg-muted p-1 rounded block break-all">
+                              {JSON.stringify(run.input_parameters).slice(0, 100)}
+                              {JSON.stringify(run.input_parameters).length > 100 && '...'}
+                            </code>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>}
 
