@@ -249,14 +249,7 @@ const EventFeed: React.FC<EventFeedProps> = ({
                            {/* Show all violations sorted by severity when expanded */}
                            {expandedViolations.has(event.id) && <div className="space-y-3">
                                {sortedViolations.map((detection, idx) => <div key={idx} className="border-l-2 border-red-300 pl-3 space-y-2">
-                                   <div className="flex items-center gap-2">
-                                     <Badge variant="destructive" className={`text-xs ${detection.severity === 'critical' ? 'bg-red-600' : detection.severity === 'high' ? 'bg-red-500' : detection.severity === 'medium' ? 'bg-orange-500' : 'bg-yellow-500'}`}>
-                                       {detection.severity?.toUpperCase()}
-                                     </Badge>
-                                     <h5 className="text-sm font-medium text-red-800">
-                                       {detection.violation_name || detection.type || 'Security Violation'}
-                                     </h5>
-                                   </div>
+                                   
                                    
                                     {detection.violation_confidence && <div className="text-xs text-red-700">
                                         <span className="font-medium">Confidence:</span> {detection.violation_confidence.toFixed(2)}
