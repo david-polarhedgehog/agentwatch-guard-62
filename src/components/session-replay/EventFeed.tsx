@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ProcessedEvent } from '@/types/session';
 import { getAgentColorClass } from '@/utils/sessionProcessor';
@@ -24,6 +24,10 @@ const EventFeed: React.FC<EventFeedProps> = ({
   const navigate = useNavigate();
   const [expandedEvents, setExpandedEvents] = useState<Set<string>>(new Set());
   const [expandedViolations, setExpandedViolations] = useState<Set<string>>(new Set());
+  
+  // Refs for scroll-to-view functionality
+  const eventRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Add keyboard navigation
   useKeyboardNavigation({
@@ -69,6 +73,17 @@ const EventFeed: React.FC<EventFeedProps> = ({
       }
     }
   }, [scrollToTraceId, events, onEventClick, hasScrolledToTrace]);
+
+  // Scroll to view when currentEventIndex changes (keyboard navigation)
+  useEffect(() => {
+    const activeEventElement = eventRefs.current.get(currentEventIndex);
+    if (activeEventElement && scrollContainerRef.current) {
+      activeEventElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest'
+      });
+    }
+  }, [currentEventIndex]);
 
   // Get severity-based border color
   const getSeverityBorderClass = (severity?: string) => {
@@ -157,7 +172,7 @@ const EventFeed: React.FC<EventFeedProps> = ({
         </p>
       </div>
       
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {events.filter(event => event.type !== 'violation').map((event, index) => {
         const colorClass = getAgentColorClass(event.agent);
         const isActive = index === currentEventIndex;
@@ -165,7 +180,19 @@ const EventFeed: React.FC<EventFeedProps> = ({
         const eventHasViolations = hasViolations(event);
         const severityBorderClass = event.severity ? getSeverityBorderClass(event.severity) : '';
         const finalBorderClass = severityBorderClass || (eventHasViolations ? 'border-destructive/50' : '');
-        return <Card key={event.id} data-event-id={event.id} className={`cursor-pointer transition-all duration-200 ${isActive ? 'ring-2 ring-primary shadow-lg' : isPast ? 'opacity-100' : 'opacity-50'} ${isActive ? 'scale-105' : 'scale-100'} ${finalBorderClass ? `border-2 ${finalBorderClass}` : ''}`} onClick={() => onEventClick(index)}>
+        return <Card 
+          key={event.id} 
+          data-event-id={event.id} 
+          ref={(el) => {
+            if (el) {
+              eventRefs.current.set(index, el);
+            } else {
+              eventRefs.current.delete(index);
+            }
+          }}
+          className={`cursor-pointer transition-all duration-200 ${isActive ? 'ring-2 ring-primary shadow-lg' : isPast ? 'opacity-100' : 'opacity-50'} ${isActive ? 'scale-105' : 'scale-100'} ${finalBorderClass ? `border-2 ${finalBorderClass}` : ''}`} 
+          onClick={() => onEventClick(index)}
+        >
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
                   <div className="flex flex-col items-center gap-1">
