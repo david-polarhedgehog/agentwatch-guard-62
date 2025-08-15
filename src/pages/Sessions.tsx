@@ -379,7 +379,7 @@ export default function Sessions() {
                             >
                               <EntityBadge
                                 type="agent"
-                                label={session.agent_id}
+                                label={session.agent_id || 'Unknown Agent'}
                                 className="hover:bg-muted/50 transition-colors"
                                 size="sm"
                               />
