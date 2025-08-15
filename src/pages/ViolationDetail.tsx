@@ -254,7 +254,7 @@ export default function ViolationDetail() {
         </Card>
 
         {/* Mitigation Suggestion */}
-        {violation.mitigation_suggestion && (
+        {violation?.mitigation_suggestion && (
           <Card>
             <CardHeader>
               <CardTitle>Mitigation Suggestion</CardTitle>
@@ -293,6 +293,20 @@ export default function ViolationDetail() {
                   </div>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Debug: Show raw mitigation data */}
+        {process.env.NODE_ENV === 'development' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Debug: Raw Violation Data</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <pre className="text-xs overflow-auto bg-muted p-2 rounded">
+                {JSON.stringify(violation, null, 2)}
+              </pre>
             </CardContent>
           </Card>
         )}
