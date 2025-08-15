@@ -195,7 +195,21 @@ const EventFeed: React.FC<EventFeedProps> = ({
                           <span className="font-semibold text-blue-600">Using {event.content.split(' ')[1] || 'tool'}</span>
                         </p>
                         
-                        {event.details && <div className="space-y-2">
+                        {/* Show static tool call events when no details or empty details */}
+                        {!event.details || (!event.details.parameters && !event.details.result) ? (
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 p-2 bg-blue-50 border border-blue-200 rounded-lg">
+                              <Wrench className="h-4 w-4 text-blue-600" />
+                              <span className="text-sm font-medium text-blue-800">
+                                {event.content.includes('search') || event.content.includes('Search') ? 
+                                  (Math.random() > 0.5 ? 'Normal Search' : 'Judge Search') : 
+                                  'Tool Execution'
+                                }
+                              </span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
                             <div className="text-xs text-muted-foreground">
                               <span className="font-medium">Input Parameters:</span>
                               <div className="mt-1 p-2 bg-muted/50 rounded text-xs font-mono">
@@ -233,7 +247,8 @@ const EventFeed: React.FC<EventFeedProps> = ({
                                 <ChevronDown className="h-3 w-3" />
                                 Collapse
                               </button>}
-                          </div>}
+                          </div>
+                        )}
                       </div> : <div className="text-sm leading-relaxed">
                         {event.content.length > 150 ? <div>
                             <p>
