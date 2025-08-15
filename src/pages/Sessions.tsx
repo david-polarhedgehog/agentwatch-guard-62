@@ -61,7 +61,9 @@ export default function Sessions() {
   const { data, isLoading, error } = useSessions({
     ...filters.sessions,
     page: currentPage,
-    limit: itemsPerPage
+    limit: itemsPerPage,
+    sort_field: sortField || undefined,
+    sort_direction: sortDirection
   });
 
   const handleSeverityFilter = (severity: string) => {
@@ -94,6 +96,8 @@ export default function Sessions() {
       setSortField(field);
       setSortDirection('desc');
     }
+    // Reset to first page when sorting changes
+    setCurrentPage(1);
   };
 
   const getSortIcon = (field: SortField) => {
@@ -110,25 +114,8 @@ export default function Sessions() {
   const totalItems = data?.pagination?.total_items || 0;
   const totalPages = data?.pagination?.total_pages || 1;
   
-  const sortedSessions = useMemo(() => {
-    if (!sortField) return sessions;
-    
-    return [...sessions].sort((a, b) => {
-      let aValue: any = a[sortField];
-      let bValue: any = b[sortField];
-      
-      if (sortField === 'created_at') {
-        aValue = new Date(aValue).getTime();
-        bValue = new Date(bValue).getTime();
-      }
-      
-      if (sortDirection === 'asc') {
-        return aValue - bValue;
-      } else {
-        return bValue - aValue;
-      }
-    });
-  }, [sessions, sortField, sortDirection]);
+  // Remove client-side sorting since it's now handled server-side
+  const sortedSessions = sessions;
 
   return (
     <MainLayout>

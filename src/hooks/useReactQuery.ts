@@ -58,7 +58,12 @@ export const useAgent = (id: string) => {
   });
 };
 
-export const useAgentSessions = (id: string, filters?: SessionFilters & { page?: number; limit?: number }) => {
+export const useAgentSessions = (id: string, filters?: SessionFilters & { 
+  page?: number; 
+  limit?: number;
+  sort_field?: string;
+  sort_direction?: string;
+}) => {
   return useQuery({
     queryKey: [...queryKeys.agentSessions(id), filters],
     queryFn: () => api.agents.getSessions(id, filters),
@@ -161,7 +166,12 @@ export const useSessionGraph = (id: string, layout?: string) => {
 };
 
 // Session hooks
-export const useSessions = (filters?: SessionFilters & { page?: number; limit?: number }) => {
+export const useSessions = (filters?: SessionFilters & { 
+  page?: number; 
+  limit?: number;
+  sort_field?: string;
+  sort_direction?: string;
+}) => {
   return useQuery({
     queryKey: [...queryKeys.sessions, filters],
     queryFn: () => api.sessions.list(filters),

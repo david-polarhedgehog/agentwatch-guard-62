@@ -98,13 +98,20 @@ export const agentsApi = {
     return response.data;
   },
 
-  getSessions: async (id: string, filters?: SessionFilters & { page?: number; limit?: number }): Promise<{
+  getSessions: async (id: string, filters?: SessionFilters & { 
+    page?: number; 
+    limit?: number;
+    sort_field?: string;
+    sort_direction?: string;
+  }): Promise<{
     sessions: Session[];
     pagination: Pagination;
   }> => {
     const params = new URLSearchParams();
     if (filters?.page) params.append('page', String(filters.page));
     if (filters?.limit) params.append('limit', String(filters.limit));
+    if (filters?.sort_field) params.append('sort_field', filters.sort_field);
+    if (filters?.sort_direction) params.append('sort_direction', filters.sort_direction);
     
     const response = await apiClient.get(`/agents/${id}/sessions?${params}`);
     return response.data;
@@ -228,7 +235,13 @@ export const agentsApi = {
 
 // Sessions API
 export const sessionsApi = {
-  list: async (filters?: SessionFilters & { page?: number; per_page?: number; limit?: number }): Promise<{
+  list: async (filters?: SessionFilters & { 
+    page?: number; 
+    per_page?: number; 
+    limit?: number;
+    sort_field?: string;
+    sort_direction?: string;
+  }): Promise<{
     sessions: Session[];
     pagination: Pagination;
   }> => {
@@ -241,6 +254,8 @@ export const sessionsApi = {
     if (filters?.agent_id) params.append('agent_id', filters.agent_id);
     if (filters?.has_detections !== undefined) params.append('has_detections', String(filters.has_detections));
     if (filters?.severity) params.append('severity', filters.severity);
+    if (filters?.sort_field) params.append('sort_field', filters.sort_field);
+    if (filters?.sort_direction) params.append('sort_direction', filters.sort_direction);
     
     const response = await apiClient.get(`/sessions?${params}`);
     return response.data;
