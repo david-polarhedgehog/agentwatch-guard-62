@@ -16,15 +16,21 @@ export default function ViolationDetail() {
   const { violationId } = useParams();
   const navigate = useNavigate();
 
-  // Fetch violation details using the existing detections endpoint
+  // Fetch violation details using the violations endpoint
   const { data: violationData, isLoading, error } = useQuery({
     queryKey: ['violation', violationId],
-    queryFn: () => detectionsApi.get(Number(violationId!)),
+    queryFn: async () => {
+      const result = await detectionsApi.getViolationDetails(Number(violationId!));
+      console.log('Violation API Response:', result);
+      return result;
+    },
     retry: false,
     enabled: !!violationId,
   });
 
-  const violation = violationData;
+  console.log('violationData:', violationData);
+  // Handle both direct Detection and wrapped response with violation property
+  const violation = violationData?.violation || (violationData as any);
 
   // Fetch complete session data
   const { data: completeSessionData } = useQuery({
