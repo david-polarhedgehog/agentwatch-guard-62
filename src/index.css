@@ -55,19 +55,19 @@
     --type-threat: 174 72% 56%;
     --type-access: 234 89% 74%;
     
-    /* Agent color scheme */
+    /* Agent color scheme - vibrant, high contrast */
     --user: 220 70% 50%;
     --user-foreground: 0 0% 100%;
     --customer-service: 262 83% 58%;
     --customer-service-foreground: 0 0% 100%;
-    --file-system: 173 58% 39%;
+    --file-system: 142 70% 40%;
     --file-system-foreground: 0 0% 100%;
-    --web-search: 197 37% 24%;
+    --web-search: 200 60% 40%;
     --web-search-foreground: 0 0% 100%;
-    --summarizer: 43 74% 66%;
-    --summarizer-foreground: 220 13% 18%;
-    --tool-call: 27 87% 67%;
-    --tool-call-foreground: 220 13% 18%;
+    --summarizer: 43 74% 55%;
+    --summarizer-foreground: 0 0% 100%;
+    --tool-call: 27 87% 60%;
+    --tool-call-foreground: 0 0% 100%;
     --default: 220 14% 96%;
     --default-foreground: 220 13% 18%;
     

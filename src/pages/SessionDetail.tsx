@@ -303,18 +303,7 @@ export default function SessionDetail() {
             <div className="bg-background rounded-lg border border-border p-3 flex items-center gap-3">
               <Bot className="h-5 w-5 text-primary" />
               <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap gap-1 mb-1">
-                  {involvedAgents.length > 0 ? involvedAgents.map(agent => 
-                    <Badge 
-                      key={agent.rawId} 
-                      variant="secondary" 
-                      className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors" 
-                      onClick={() => navigate(`/agents/${agent.rawId}`)}
-                    >
-                      {agent.name}
-                    </Badge>
-                  ) : <Badge variant="outline" className="text-xs">Unknown</Badge>}
-                </div>
+                <div className="text-lg font-semibold">{involvedAgents.length}</div>
                 <div className="text-xs text-muted-foreground">Agents</div>
               </div>
             </div>

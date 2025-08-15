@@ -10,6 +10,7 @@ import {
   MiniMap,
   NodeTypes,
   EdgeTypes,
+  MarkerType,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -34,12 +35,12 @@ const UserNode = ({ data }: { data: Record<string, any> }) => {
 const AgentNode = ({ data }: { data: Record<string, any> }) => {
   const nodeData = data as SystemGraphNode;
   return (
-    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-3 min-w-[160px] max-w-[200px]">
+    <div className="bg-primary/10 border-2 border-primary/20 rounded-lg p-3 min-w-[160px] max-w-[200px]">
       <div className="flex items-center gap-2 mb-1">
-        <Bot className="h-4 w-4 text-blue-600" />
-        <span className="text-sm font-medium text-blue-900">Agent</span>
+        <Bot className="h-4 w-4 text-primary" />
+        <span className="text-sm font-medium text-primary">Agent</span>
       </div>
-      <p className="text-xs text-blue-700 font-mono truncate" title={nodeData.id}>
+      <p className="text-xs text-primary/80 font-mono truncate" title={nodeData.id}>
         {nodeData.id.split('_').slice(-2).join('_')}
       </p>
       <div className="flex gap-1 mt-2">
@@ -54,13 +55,13 @@ const AgentNode = ({ data }: { data: Record<string, any> }) => {
 const ToolNode = ({ data }: { data: Record<string, any> }) => {
   const nodeData = data as SystemGraphNode;
   return (
-    <div className="bg-green-50 border-2 border-green-200 rounded-lg p-3 min-w-[120px]">
+    <div className="bg-tool-call/10 border-2 border-tool-call/20 rounded-lg p-3 min-w-[120px]">
       <div className="flex items-center gap-2 mb-1">
-        <Wrench className="h-4 w-4 text-green-600" />
-        <span className="text-sm font-medium text-green-900">Tool</span>
+        <Wrench className="h-4 w-4 text-tool-call" />
+        <span className="text-sm font-medium text-tool-call">Tool</span>
       </div>
-      <p className="text-xs text-green-700 font-mono">{nodeData.label}</p>
-      <p className="text-xs text-green-600 mt-1">{nodeData.metadata?.description}</p>
+      <p className="text-xs text-tool-call/80 font-mono">{nodeData.label}</p>
+      <p className="text-xs text-tool-call/70 mt-1">{nodeData.metadata?.description}</p>
     </div>
   );
 };
@@ -116,8 +117,12 @@ export function SystemArchitectureGraph({
         target: edge.target,
         type: 'smoothstep',
         animated: isHighlighted,
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
+        },
         style: {
-          stroke: isHighlighted ? '#3b82f6' : '#94a3b8',
+          stroke: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
           strokeWidth: isHighlighted ? 3 : 2,
           opacity: highlightedEdges.length === 0 || isHighlighted ? 1 : 0.3,
           transition: 'all 0.2s ease-in-out',
@@ -125,7 +130,7 @@ export function SystemArchitectureGraph({
         label: edge.type.replace('_', ' → '),
         labelStyle: {
           fontSize: '11px',
-          fill: isHighlighted ? '#1e40af' : '#64748b',
+          fill: isHighlighted ? 'hsl(var(--primary))' : 'hsl(var(--muted-foreground))',
         },
       };
     });

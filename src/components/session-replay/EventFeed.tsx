@@ -182,14 +182,15 @@ const EventFeed: React.FC<EventFeedProps> = ({
                   
                   <div className="flex-1 min-w-0">
                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="text-xs px-2 py-1" style={{
-                      backgroundColor: `hsl(var(--${colorClass}) / 0.1)`,
-                      color: `hsl(var(--${colorClass}))`
+                         <div className="flex items-center gap-2">
+                           <Badge variant="secondary" className="text-xs px-2 py-1" style={{
+                      backgroundColor: `hsl(var(--${colorClass}) / 0.15)`,
+                      color: `hsl(var(--${colorClass}))`,
+                      borderColor: `hsl(var(--${colorClass}) / 0.3)`
                     }}>
-                              {event.agent}
-                            </Badge>
-                        </div>
+                               {event.agent}
+                             </Badge>
+                         </div>
                        <span className="text-xs text-muted-foreground ml-auto">
                          {formatTimestamp(event.timestamp)}
                        </span>
@@ -278,9 +279,18 @@ const EventFeed: React.FC<EventFeedProps> = ({
                          </div>;
                 })()}
                      
-                     {event.type === 'handoff' && event.details && <div className="mt-2 text-xs text-muted-foreground">
-                         Reason: {event.details.reason}
-                       </div>}
+                     {event.type === 'handoff' && event.details && <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
+                          <div className="flex items-center gap-2 mb-1">
+                            <ArrowRight className="h-3 w-3 text-blue-600" />
+                            <span className="font-medium text-blue-800">Handoff: {event.details.from_agent} → {event.details.to_agent}</span>
+                          </div>
+                          <div className="text-blue-700">
+                            <span className="font-medium">Reason:</span> {event.details.reason || 'Agent transition'}
+                          </div>
+                          {event.details.handoff_type && <div className="text-blue-700">
+                            <span className="font-medium">Type:</span> {event.details.handoff_type}
+                          </div>}
+                        </div>}
                   </div>
                 </div>
               </CardContent>
