@@ -248,14 +248,25 @@ export function getAgentColorClass(agent: string): string {
   const colorMap: Record<string, string> = {
     'User': 'user',
     'Customer Service Agent': 'customer-service',
+    'CustomerServiceAgent': 'customer-service',
     'File System Agent': 'file-system',
+    'FileSystemAgent': 'file-system',
     'Web Search Agent': 'web-search',
+    'WebSearchAgent': 'web-search',
+    'WebPortalAgent': 'web-search',
     'Summarizer Agent': 'summarizer',
+    'SummarizerAgent': 'summarizer',
+    'JuryAgent': 'customer-service',
+    'JudgeAgent': 'customer-service',
+    // Tool calls (these should be handled separately now)
     'Tool Call': 'tool-call',
+    'Normal Search': 'tool-call',
+    'Judge Search': 'tool-call',
     'write_file': 'tool-call',
     'read_file': 'tool-call',
     'search_files': 'tool-call',
     'search_web': 'tool-call',
+    'web_search': 'tool-call',
   };
 
   return colorMap[agent] || 'default';

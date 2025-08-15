@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { ApiSessionResponse } from '@/types/session';
 import { processSessionData } from '@/utils/sessionProcessor';
-import MultiAgentFlow from './MultiAgentFlow';
+import SessionFlowGraph from './SessionFlowGraph';
 import EventFeed from './EventFeed';
 import Timeline from './Timeline';
 import { Button } from '@/components/ui/button';
@@ -38,7 +38,7 @@ const MultiAgentDashboard: React.FC<MultiAgentDashboardProps> = ({
             {showGraph && <>
                 <Panel defaultSize={70} minSize={30}>
                   <div className="h-full w-full">
-                    <MultiAgentFlow events={events} currentEventIndex={currentEventIndex} />
+                    <SessionFlowGraph events={events} currentEventIndex={currentEventIndex} />
                   </div>
                 </Panel>
                 <PanelResizeHandle className="w-2 bg-border hover:bg-accent transition-colors" />
