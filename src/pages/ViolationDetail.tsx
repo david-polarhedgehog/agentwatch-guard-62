@@ -16,15 +16,15 @@ export default function ViolationDetail() {
   const { violationId } = useParams();
   const navigate = useNavigate();
 
-  // Fetch violation details including mitigation suggestions
-  const { data: violationDetailsData, isLoading, error } = useQuery({
-    queryKey: ['violation-details', violationId],
-    queryFn: () => detectionsApi.getViolationDetails(Number(violationId!)),
+  // Fetch violation details using the existing detections endpoint
+  const { data: violationData, isLoading, error } = useQuery({
+    queryKey: ['violation', violationId],
+    queryFn: () => detectionsApi.get(Number(violationId!)),
     retry: false,
     enabled: !!violationId,
   });
 
-  const violation = violationDetailsData?.violation;
+  const violation = violationData;
 
   // Fetch complete session data
   const { data: completeSessionData } = useQuery({
