@@ -93,7 +93,12 @@ const EventFeed: React.FC<EventFeedProps> = ({
 
   // Sort violations by severity (critical > high > medium > low)
   const sortViolationsBySeverity = (violations: any[]) => {
-    const severityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+    const severityOrder = {
+      'critical': 0,
+      'high': 1,
+      'medium': 2,
+      'low': 3
+    };
     return [...violations].sort((a, b) => {
       const aSeverity = severityOrder[a.severity as keyof typeof severityOrder] ?? 4;
       const bSeverity = severityOrder[b.severity as keyof typeof severityOrder] ?? 4;
@@ -195,45 +200,7 @@ const EventFeed: React.FC<EventFeedProps> = ({
                           <span className="font-semibold text-blue-600">Using {event.content.split(' ')[1] || 'tool'}</span>
                         </p>
                         
-                        {event.details && <div className="space-y-2">
-                            <div className="text-xs text-muted-foreground">
-                              <span className="font-medium">Input Parameters:</span>
-                              <div className="mt-1 p-2 bg-muted/50 rounded text-xs font-mono">
-                                {expandedEvents.has(event.id) ? JSON.stringify(event.details.parameters, null, 2) : <div className="flex items-center justify-between">
-                                     <span className="truncate flex-1">{JSON.stringify(event.details.parameters, null, 0).substring(0, 60)}...</span>
-                                     <button onClick={e => {
-                            e.stopPropagation();
-                            toggleEventExpansion(event.id);
-                          }} className="flex items-center gap-1 text-primary hover:text-primary/80 flex-shrink-0 ml-2">
-                                       <ChevronRight className="h-3 w-3" />
-                                     </button>
-                                   </div>}
-                              </div>
-                            </div>
-                            
-                            {event.details.result && <div className="text-xs text-muted-foreground">
-                                <span className="font-medium">Output:</span>
-                                <div className="mt-1 p-2 bg-muted/50 rounded text-xs">
-                                  {expandedEvents.has(event.id) ? typeof event.details.result === 'string' ? event.details.result : JSON.stringify(event.details.result, null, 2) : <div className="flex items-center justify-between">
-                                       <span className="truncate flex-1">{(typeof event.details.result === 'string' ? event.details.result : JSON.stringify(event.details.result)).substring(0, 60)}...</span>
-                                       <button onClick={e => {
-                            e.stopPropagation();
-                            toggleEventExpansion(event.id);
-                          }} className="flex items-center gap-1 text-primary hover:text-primary/80 flex-shrink-0 ml-2">
-                                         <ChevronRight className="h-3 w-3" />
-                                       </button>
-                                     </div>}
-                                </div>
-                              </div>}
-                            
-                            {expandedEvents.has(event.id) && <button onClick={e => {
-                      e.stopPropagation();
-                      toggleEventExpansion(event.id);
-                    }} className="flex items-center gap-1 text-primary hover:text-primary/80 text-xs mt-2">
-                                <ChevronDown className="h-3 w-3" />
-                                Collapse
-                              </button>}
-                          </div>}
+                        {event.details}
                       </div> : <div className="text-sm leading-relaxed">
                         {event.content.length > 150 ? <div>
                             <p>
@@ -256,16 +223,12 @@ const EventFeed: React.FC<EventFeedProps> = ({
                      
                       {/* Always show violation section for events with violations */}
                      {eventHasViolations && (() => {
-                       const sortedViolations = sortViolationsBySeverity(event.detections || []);
-                       const mostSevereViolation = sortedViolations[0];
-                       
-                       return <div 
-                         className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg space-y-2 cursor-pointer hover:bg-red-100 transition-colors"
-                         onClick={e => {
-                           e.stopPropagation();
-                           toggleViolationExpansion(event.id);
-                         }}
-                       >
+                  const sortedViolations = sortViolationsBySeverity(event.detections || []);
+                  const mostSevereViolation = sortedViolations[0];
+                  return <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg space-y-2 cursor-pointer hover:bg-red-100 transition-colors" onClick={e => {
+                    e.stopPropagation();
+                    toggleViolationExpansion(event.id);
+                  }}>
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -315,7 +278,7 @@ const EventFeed: React.FC<EventFeedProps> = ({
                                  </div>)}
                              </div>}
                          </div>;
-                     })()}
+                })()}
                      
                      {event.type === 'handoff' && event.details && <div className="mt-2 text-xs text-muted-foreground">
                          Reason: {event.details.reason}
