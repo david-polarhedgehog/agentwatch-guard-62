@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Shield, Users, MessageSquare, AlertTriangle, BarChart3, Settings, HelpCircle } from 'lucide-react';
+import { Home, Shield, Users, MessageSquare, AlertTriangle, BarChart3, Settings, HelpCircle, LogOut } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 interface ModernSidebarProps {
   className?: string;
 }
@@ -34,6 +35,7 @@ const bottomItems = [{
 export function ModernSidebar({
   className
 }: ModernSidebarProps) {
+  const { signOut } = useAuth();
   return <aside className={cn('fixed left-0 top-0 w-16 h-screen bg-background border-r border-border flex flex-col z-50', className)}>
       {/* Logo */}
       <div className="h-16 flex items-center justify-center border-b border-border">
@@ -81,6 +83,20 @@ export function ModernSidebar({
               </div>
             </NavLink>
           ))}
+          
+          {/* Logout Button */}
+          <button
+            onClick={signOut}
+            className="w-12 h-12 mx-2 rounded-lg flex items-center justify-center transition-colors group relative text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+            title="Sign Out"
+          >
+            <LogOut className="h-5 w-5" />
+            
+            {/* Tooltip */}
+            <div className="absolute left-full ml-2 px-2 py-1 bg-foreground text-background text-xs rounded opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Sign Out
+            </div>
+          </button>
         </div>
       </div>
     </aside>;
