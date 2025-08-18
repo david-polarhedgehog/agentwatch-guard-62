@@ -138,7 +138,16 @@ function ToolCard({
           {detailsLoading && <LoadingSpinner text="Loading tool details..." />}
           
           {/* Show schema from basic tool data first */}
-          {tool.schema}
+          {tool.schema && (
+            <div>
+              <h4 className="font-medium mb-2">Tool Schema</h4>
+              <div className="bg-muted p-4 rounded-lg">
+                <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+                  {JSON.stringify(tool.schema, null, 2)}
+                </pre>
+              </div>
+            </div>
+          )}
           
           {toolDetails && <>
               {/* Additional schema from detailed endpoint if different */}
