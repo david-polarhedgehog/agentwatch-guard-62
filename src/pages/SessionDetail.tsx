@@ -143,7 +143,7 @@ export default function SessionDetail() {
   // Extract session from the API response which includes agent data
   const session = sessionResponse as any; // The API returns expanded session data
 
-  // Extract agent IDs from session data - include all sources
+  // Extract agent IDs from session data - include all sources but filter out tools
   const extractInvolvedAgentIds = () => {
     const agentIds = new Set<string>();
 
@@ -153,27 +153,41 @@ export default function SessionDetail() {
       agentIds.add(primaryAgentId);
     }
 
-    // From agent_names field (most comprehensive)
+    // From agent_names field (most comprehensive) - but filter out tools
     if (session?.agent_names) {
       Object.keys(session.agent_names).forEach(agentId => {
-        agentIds.add(agentId);
-      });
-    }
-
-    // From agent_responses (extract agent from response metadata)
-    if (session?.agent_responses) {
-      session.agent_responses.forEach((response: any) => {
-        if (response.agent) {
-          agentIds.add(response.agent);
+        // Filter out tool names (they typically don't contain "agent" and are lowercase)
+        const name = session.agent_names[agentId].toLowerCase();
+        if (name.includes('agent') || name.includes('user') || name === 'user') {
+          agentIds.add(agentId);
         }
       });
     }
 
-    // From chat_history metadata if available
+    // From agent_responses (extract agent from response metadata) - filter out tools
+    if (session?.agent_responses) {
+      session.agent_responses.forEach((response: any) => {
+        if (response.agent) {
+          const agentName = response.agent.toLowerCase();
+          // Only include if it looks like an agent, not a tool
+          if (agentName.includes('agent') || agentName === 'user' || 
+              !agentName.includes('_') || !agentName.match(/^[a-z_]+$/)) {
+            agentIds.add(response.agent);
+          }
+        }
+      });
+    }
+
+    // From chat_history metadata if available - filter out tools
     if (session?.chat_history) {
       session.chat_history.forEach((message: any) => {
         if (message.agent_id) {
-          agentIds.add(message.agent_id);
+          const agentName = message.agent_id.toLowerCase();
+          // Only include if it looks like an agent, not a tool
+          if (agentName.includes('agent') || agentName === 'user' || 
+              !agentName.includes('_') || !agentName.match(/^[a-z_]+$/)) {
+            agentIds.add(message.agent_id);
+          }
         }
       });
     }

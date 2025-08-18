@@ -203,17 +203,17 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         const toolIndex = toolsForAgent.indexOf(tool);
         const totalTools = toolsForAgent.length;
         
-        // Calculate horizontal offset for multiple tools under same agent
+        // Calculate horizontal offset for multiple tools under same agent with wider spacing
         let xOffset = 0;
         if (totalTools > 1) {
-          const toolSpacing = 120;
+          const toolSpacing = 180; // Increased from 120 to prevent overlap
           const totalToolWidth = (totalTools - 1) * toolSpacing;
           xOffset = -totalToolWidth / 2 + (toolIndex * toolSpacing);
         }
         
         toolPositions[tool] = {
           x: basePos.x + xOffset,
-          y: basePos.y + 160  // Increased spacing to avoid overlap
+          y: basePos.y + 180  // Increased from 160 to create more vertical space
         };
       }
     });
