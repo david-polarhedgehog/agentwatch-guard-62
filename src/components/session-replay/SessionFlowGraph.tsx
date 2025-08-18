@@ -131,34 +131,55 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     const agents = Array.from(sessionFlow.agents);
     const tools = Array.from(sessionFlow.tools.keys());
 
-    // Position agents in a logical flow layout
-    const agentPositions: Record<string, { x: number; y: number }> = {
-      'User': { x: 400, y: 50 },
-    };
-
-    // Position other agents based on handoff flow or discovery order
-    let agentX = 100;
-    let agentY = 200;
-    agents.forEach((agent, index) => {
-      if (agent !== 'User' && !agentPositions[agent]) {
-        agentPositions[agent] = { x: agentX, y: agentY };
-        agentX += 300;
-        if (agentX > 900) {
-          agentX = 100;
-          agentY += 200;
+    // Find primary agent (first to respond to user)
+    const agentFirstResponse = new Map<string, number>();
+    const nonViolationEvents = events.filter(event => event.type !== 'violation');
+    
+    nonViolationEvents.forEach((event, index) => {
+      if (event.type === 'agent_response' && event.agent !== 'User') {
+        if (!agentFirstResponse.has(event.agent)) {
+          agentFirstResponse.set(event.agent, index);
         }
       }
     });
 
-    // Position tools near their associated agents
+    const primaryAgent = agentFirstResponse.size > 0 
+      ? Array.from(agentFirstResponse.entries()).sort((a, b) => a[1] - b[1])[0][0]
+      : null;
+
+    // Clean hierarchical layout
+    const agentPositions: Record<string, { x: number; y: number }> = {};
+    
+    // User at top center
+    agentPositions['User'] = { x: 400, y: 50 };
+    
+    // Primary agent directly below user
+    if (primaryAgent) {
+      agentPositions[primaryAgent] = { x: 400, y: 200 };
+    }
+    
+    // Sub-agents in horizontal row below primary agent
+    const subAgents = agents.filter(agent => agent !== 'User' && agent !== primaryAgent);
+    const subAgentSpacing = 280;
+    const totalSubAgentWidth = (subAgents.length - 1) * subAgentSpacing;
+    const subAgentStartX = 400 - (totalSubAgentWidth / 2);
+    
+    subAgents.forEach((agent, index) => {
+      agentPositions[agent] = { 
+        x: subAgentStartX + (index * subAgentSpacing), 
+        y: 380 
+      };
+    });
+
+    // Position tools directly below their associated agents
     const toolPositions: Record<string, { x: number; y: number }> = {};
-    tools.forEach((tool, index) => {
+    tools.forEach((tool) => {
       const parentAgent = sessionFlow.tools.get(tool);
       if (parentAgent && agentPositions[parentAgent]) {
         const basePos = agentPositions[parentAgent];
         toolPositions[tool] = {
-          x: basePos.x + (index % 2 === 0 ? -150 : 150),
-          y: basePos.y + 120
+          x: basePos.x,
+          y: basePos.y + 140
         };
       }
     });
