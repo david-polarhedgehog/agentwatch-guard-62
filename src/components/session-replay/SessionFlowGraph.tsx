@@ -147,39 +147,73 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       ? Array.from(agentFirstResponse.entries()).sort((a, b) => a[1] - b[1])[0][0]
       : null;
 
-    // Clean hierarchical layout
+    // Clean hierarchical layout with proper spacing to avoid overlaps
     const agentPositions: Record<string, { x: number; y: number }> = {};
     
     // User at top center
-    agentPositions['User'] = { x: 400, y: 50 };
+    agentPositions['User'] = { x: 500, y: 80 };
     
-    // Primary agent directly below user
+    // Primary agent directly below user with adequate spacing
     if (primaryAgent) {
-      agentPositions[primaryAgent] = { x: 400, y: 200 };
+      agentPositions[primaryAgent] = { x: 500, y: 220 };
     }
     
-    // Sub-agents in horizontal row below primary agent
+    // Sub-agents in horizontal row below primary agent with proper spacing
     const subAgents = agents.filter(agent => agent !== 'User' && agent !== primaryAgent);
-    const subAgentSpacing = 280;
-    const totalSubAgentWidth = (subAgents.length - 1) * subAgentSpacing;
-    const subAgentStartX = 400 - (totalSubAgentWidth / 2);
     
-    subAgents.forEach((agent, index) => {
+    // Sort sub-agents for consistent ordering (File System, Web Search, Summarizer pattern)
+    const agentOrder = ['File System Agent', 'Web Search Agent', 'Summarizer Agent'];
+    const sortedSubAgents = subAgents.sort((a, b) => {
+      const aIndex = agentOrder.findIndex(name => a.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
+      const bIndex = agentOrder.findIndex(name => b.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
+      if (aIndex === -1) return 1;
+      if (bIndex === -1) return -1;
+      return aIndex - bIndex;
+    });
+    
+    // Calculate spacing to ensure no overlaps - minimum 300px between agents
+    const minAgentSpacing = 300;
+    const totalSubAgentWidth = Math.max((sortedSubAgents.length - 1) * minAgentSpacing, 0);
+    const subAgentStartX = 500 - (totalSubAgentWidth / 2);
+    
+    sortedSubAgents.forEach((agent, index) => {
       agentPositions[agent] = { 
-        x: subAgentStartX + (index * subAgentSpacing), 
-        y: 380 
+        x: subAgentStartX + (index * minAgentSpacing), 
+        y: 400 
       };
     });
 
-    // Position tools directly below their associated agents
+    // Position tools directly below their associated agents with extra spacing
     const toolPositions: Record<string, { x: number; y: number }> = {};
+    const agentToolCounts = new Map<string, number>();
+    
+    // Count tools per agent
+    tools.forEach((tool) => {
+      const parentAgent = sessionFlow.tools.get(tool);
+      if (parentAgent) {
+        agentToolCounts.set(parentAgent, (agentToolCounts.get(parentAgent) || 0) + 1);
+      }
+    });
+    
     tools.forEach((tool) => {
       const parentAgent = sessionFlow.tools.get(tool);
       if (parentAgent && agentPositions[parentAgent]) {
         const basePos = agentPositions[parentAgent];
+        const toolsForAgent = tools.filter(t => sessionFlow.tools.get(t) === parentAgent);
+        const toolIndex = toolsForAgent.indexOf(tool);
+        const totalTools = toolsForAgent.length;
+        
+        // Calculate horizontal offset for multiple tools under same agent
+        let xOffset = 0;
+        if (totalTools > 1) {
+          const toolSpacing = 120;
+          const totalToolWidth = (totalTools - 1) * toolSpacing;
+          xOffset = -totalToolWidth / 2 + (toolIndex * toolSpacing);
+        }
+        
         toolPositions[tool] = {
-          x: basePos.x,
-          y: basePos.y + 140
+          x: basePos.x + xOffset,
+          y: basePos.y + 160  // Increased spacing to avoid overlap
         };
       }
     });
