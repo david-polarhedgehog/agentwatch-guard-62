@@ -47,18 +47,36 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
 
     // Filter out violation events for flow analysis
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
+    
+    // Find the primary agent (the one user directly interacts with)
+    let primaryAgent: string | null = null;
+    const agentFirstResponse = new Map<string, number>();
+
+    // First pass: identify all agents and find the primary one
+    nonViolationEvents.forEach((event, index) => {
+      if (event.type === 'agent_response' && event.agent !== 'User') {
+        flow.agents.add(event.agent);
+        if (!agentFirstResponse.has(event.agent)) {
+          agentFirstResponse.set(event.agent, index);
+        }
+      }
+    });
+
+    // The primary agent is the first one to respond to user
+    if (agentFirstResponse.size > 0) {
+      primaryAgent = Array.from(agentFirstResponse.entries())
+        .sort((a, b) => a[1] - b[1])[0][0];
+    }
 
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
-          // User is asking/requesting something from an agent
-          if (event.agent !== 'User') {
-            // Find the next agent response to determine target agent
+          // User only directly interacts with the primary agent
+          if (primaryAgent && event.agent !== 'User') {
             const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
-            if (nextResponse && nextResponse.agent !== 'User') {
-              flow.agents.add(nextResponse.agent);
+            if (nextResponse && nextResponse.agent === primaryAgent) {
               flow.userInteractions.push({
-                agent: nextResponse.agent,
+                agent: primaryAgent,
                 eventIndex: index,
                 type: 'request'
               });
@@ -67,9 +85,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           break;
 
         case 'agent_response':
-          // Agent is responding back to user or another agent
-          if (event.agent !== 'User') {
-            flow.agents.add(event.agent);
+          // Only primary agent responds directly to user
+          if (event.agent === primaryAgent) {
             flow.userInteractions.push({
               agent: event.agent,
               eventIndex: index,
