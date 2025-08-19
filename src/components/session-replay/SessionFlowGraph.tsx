@@ -57,19 +57,20 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
 
     console.log('🔍 [GRAPH DEBUG] First pass: collecting unique agents...');
     nonViolationEvents.forEach((event, index) => {
-      // Collect agents from all event types
+      // Collect agents from all event types - ONLY use agent_id as key when available
       if (event.agent !== 'User') {
-        const agentId = event.agent_id || event.agent;
+        // Always prefer agent_id over agent name as the key
+        const agentId = event.agent_id || event.agent; // Only fallback to agent name if no agent_id
         const displayName = event.agent;
         
-        console.log(`🔍 [GRAPH DEBUG] Event ${index}: type=${event.type}, agent="${event.agent}", agent_id="${event.agent_id}", computed_agentId="${agentId}"`);
+        console.log(`🔍 [GRAPH DEBUG] Event ${index}: type=${event.type}, agent="${event.agent}", agent_id="${event.agent_id}", using_key="${agentId}"`);
         
         // Only add if not already exists to prevent duplicates
         if (!uniqueAgents.has(agentId)) {
           uniqueAgents.set(agentId, displayName);
           console.log(`🔍 [GRAPH DEBUG] Added unique agent: ${agentId} -> ${displayName}`);
         } else {
-          console.log(`🔍 [GRAPH DEBUG] Agent already exists: ${agentId}`);
+          console.log(`🔍 [GRAPH DEBUG] Agent already exists: ${agentId} (skipping duplicate)`);
         }
         
         // Track first response for primary agent determination
