@@ -51,21 +51,63 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
     console.log('🔍 [GRAPH DEBUG] Non-violation events:', nonViolationEvents.length);
     
-    // First pass: collect all unique agents to avoid duplicates
-    const uniqueAgents = new Map<string, string>(); // agent_id -> display_name
+    // First pass: Build authoritative agent_id -> display_name mapping from events that have agent_id
+    const agentIdToDisplayName = new Map<string, string>();
+    const displayNameToAgentId = new Map<string, string>();
     const agentFirstResponse = new Map<string, number>();
 
-    console.log('🔍 [GRAPH DEBUG] First pass: collecting unique agents...');
+    console.log('🔍 [GRAPH DEBUG] First pass: building agent_id mappings...');
     nonViolationEvents.forEach((event, index) => {
-      // Collect agents from all event types - ONLY use agent_id as key when available
-      if (event.agent !== 'User') {
-        // Always prefer agent_id over agent name as the key
-        const agentId = event.agent_id || event.agent; // Only fallback to agent name if no agent_id
+      if (event.agent !== 'User' && event.agent_id) {
+        // This event has both agent_id and display name - use this as authoritative mapping
+        const agentId = event.agent_id;
         const displayName = event.agent;
         
-        console.log(`🔍 [GRAPH DEBUG] Event ${index}: type=${event.type}, agent="${event.agent}", agent_id="${event.agent_id}", using_key="${agentId}"`);
+        if (!agentIdToDisplayName.has(agentId)) {
+          agentIdToDisplayName.set(agentId, displayName);
+          displayNameToAgentId.set(displayName, agentId);
+          console.log(`🔍 [GRAPH DEBUG] Authoritative mapping: ${agentId} -> ${displayName}`);
+        }
         
-        // Only add if not already exists to prevent duplicates
+        // Track first response for primary agent determination
+        if (event.type === 'agent_response' && !agentFirstResponse.has(agentId)) {
+          agentFirstResponse.set(agentId, index);
+          console.log(`🔍 [GRAPH DEBUG] First response tracked: ${agentId} at index ${index}`);
+        }
+      }
+    });
+
+    // Second pass: Collect all unique agents using consistent agent_id keys
+    const uniqueAgents = new Map<string, string>(); // agent_id -> display_name
+    
+    console.log('🔍 [GRAPH DEBUG] Second pass: collecting unique agents with consistent keys...');
+    nonViolationEvents.forEach((event, index) => {
+      if (event.agent !== 'User') {
+        let agentId: string;
+        let displayName: string;
+        
+        if (event.agent_id) {
+          // Event has agent_id - use it directly
+          agentId = event.agent_id;
+          displayName = event.agent;
+        } else {
+          // Event only has display name - try to map back to agent_id
+          const mappedAgentId = displayNameToAgentId.get(event.agent);
+          if (mappedAgentId) {
+            agentId = mappedAgentId;
+            displayName = event.agent;
+            console.log(`🔍 [GRAPH DEBUG] Mapped display name "${event.agent}" to agent_id "${mappedAgentId}"`);
+          } else {
+            // No mapping found - use display name as fallback key (shouldn't happen with good data)
+            agentId = event.agent;
+            displayName = event.agent;
+            console.log(`🔍 [GRAPH DEBUG] No mapping found for "${event.agent}", using as fallback key`);
+          }
+        }
+        
+        console.log(`🔍 [GRAPH DEBUG] Event ${index}: type=${event.type}, agent="${event.agent}", agent_id="${event.agent_id}", resolved_key="${agentId}"`);
+        
+        // Only add if not already exists
         if (!uniqueAgents.has(agentId)) {
           uniqueAgents.set(agentId, displayName);
           console.log(`🔍 [GRAPH DEBUG] Added unique agent: ${agentId} -> ${displayName}`);
@@ -73,7 +115,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           console.log(`🔍 [GRAPH DEBUG] Agent already exists: ${agentId} (skipping duplicate)`);
         }
         
-        // Track first response for primary agent determination
+        // Track first response for primary agent determination (update with resolved agent_id)
         if (event.type === 'agent_response' && !agentFirstResponse.has(agentId)) {
           agentFirstResponse.set(agentId, index);
           console.log(`🔍 [GRAPH DEBUG] First response tracked: ${agentId} at index ${index}`);
@@ -115,28 +157,46 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     console.log('🔍 [GRAPH DEBUG] Primary agent determined:', primaryAgent);
     console.log('🔍 [GRAPH DEBUG] Agent first responses:', Array.from(agentFirstResponse.entries()));
 
-    // Second pass: build interactions, handoffs, and tool calls
-    console.log('🔍 [GRAPH DEBUG] Second pass: building interactions...');
+    // Third pass: build interactions, handoffs, and tool calls using consistent agent resolution
+    console.log('🔍 [GRAPH DEBUG] Third pass: building interactions...');
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
           // User only directly interacts with the primary agent
           if (primaryAgent && event.agent !== 'User') {
             const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
-            if (nextResponse && (nextResponse.agent_id || nextResponse.agent) === primaryAgent) {
-              flow.userInteractions.push({
-                agent: primaryAgent,
-                eventIndex: index,
-                type: 'request'
-              });
-              console.log(`🔍 [GRAPH DEBUG] Added user interaction request: ${primaryAgent} at ${index}`);
+            if (nextResponse) {
+              // Use same agent resolution logic as in uniqueAgents collection
+              let responseAgentId: string;
+              if (nextResponse.agent_id) {
+                responseAgentId = nextResponse.agent_id;
+              } else {
+                const mappedAgentId = displayNameToAgentId.get(nextResponse.agent);
+                responseAgentId = mappedAgentId || nextResponse.agent;
+              }
+              
+              if (responseAgentId === primaryAgent) {
+                flow.userInteractions.push({
+                  agent: primaryAgent,
+                  eventIndex: index,
+                  type: 'request'
+                });
+                console.log(`🔍 [GRAPH DEBUG] Added user interaction request: ${primaryAgent} at ${index}`);
+              }
             }
           }
           break;
 
         case 'agent_response':
-          // Only primary agent responds directly to user - use agent_id for comparison
-          const responseAgentId = event.agent_id || event.agent;
+          // Only primary agent responds directly to user - use consistent agent resolution
+          let responseAgentId: string;
+          if (event.agent_id) {
+            responseAgentId = event.agent_id;
+          } else {
+            const mappedAgentId = displayNameToAgentId.get(event.agent);
+            responseAgentId = mappedAgentId || event.agent;
+          }
+          
           if (responseAgentId === primaryAgent) {
             flow.userInteractions.push({
               agent: responseAgentId,
@@ -160,16 +220,23 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           break;
 
         case 'tool_call':
-          // Agent is using a tool (tools are NOT separate agents) - use agent_id for keying
+          // Agent is using a tool (tools are NOT separate agents) - use consistent agent resolution
           if (event.agent !== 'User' && event.details?.tool_name) {
-            const agentId = event.agent_id || event.agent;
-            flow.tools.set(event.details.tool_name, agentId);
+            let toolAgentId: string;
+            if (event.agent_id) {
+              toolAgentId = event.agent_id;
+            } else {
+              const mappedAgentId = displayNameToAgentId.get(event.agent);
+              toolAgentId = mappedAgentId || event.agent;
+            }
+            
+            flow.tools.set(event.details.tool_name, toolAgentId);
             flow.toolCalls.push({
-              agent: agentId,
+              agent: toolAgentId,
               tool: event.details.tool_name,
               eventIndex: index
             });
-            console.log(`🔍 [GRAPH DEBUG] Added tool call: ${agentId} -> ${event.details.tool_name} at ${index}`);
+            console.log(`🔍 [GRAPH DEBUG] Added tool call: ${toolAgentId} -> ${event.details.tool_name} at ${index}`);
           }
           break;
       }
