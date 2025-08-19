@@ -22,13 +22,13 @@ interface SessionFlowGraphProps {
   currentEventIndex: number;
 }
 
-// Represents the session flow structure - using agent_id for node keying
+// Represents the session flow structure
 interface SessionFlow {
-  agents: Map<string, string>; // agent_id -> display_name mapping
-  tools: Map<string, string>; // tool -> agent_id that uses it
-  handoffs: Array<{ from: string; to: string; eventIndex: number }>; // using agent_ids
-  userInteractions: Array<{ agent: string; eventIndex: number; type: 'request' | 'response' }>; // using agent_ids
-  toolCalls: Array<{ agent: string; tool: string; eventIndex: number }>; // using agent_ids
+  agents: Set<string>;
+  tools: Map<string, string>; // tool -> agent that uses it
+  handoffs: Array<{ from: string; to: string; eventIndex: number }>;
+  userInteractions: Array<{ agent: string; eventIndex: number; type: 'request' | 'response' }>;
+  toolCalls: Array<{ agent: string; tool: string; eventIndex: number }>;
 }
 
 const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, currentEventIndex }) => {
@@ -38,7 +38,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
   // Analyze session flow to understand the actual conversation structure
   const sessionFlow = useMemo((): SessionFlow => {
     const flow: SessionFlow = {
-      agents: new Map([['User', 'User']]), // Always start with User - agent_id -> display_name
+      agents: new Set(['User']), // Always start with User
       tools: new Map(),
       handoffs: [],
       userInteractions: [],
@@ -52,14 +52,12 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     let primaryAgent: string | null = null;
     const agentFirstResponse = new Map<string, number>();
 
-    // First pass: identify all agents and find the primary one - use agent_id for keying
+    // First pass: identify all agents and find the primary one
     nonViolationEvents.forEach((event, index) => {
       if (event.type === 'agent_response' && event.agent !== 'User') {
-        const agentId = event.agent_id || event.agent;
-        const displayName = event.agent;
-        flow.agents.set(agentId, displayName);
-        if (!agentFirstResponse.has(agentId)) {
-          agentFirstResponse.set(agentId, index);
+        flow.agents.add(event.agent);
+        if (!agentFirstResponse.has(event.agent)) {
+          agentFirstResponse.set(event.agent, index);
         }
       }
     });
@@ -73,12 +71,10 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
-          // Find the next agent response to determine which agent handles this user message
-          const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
-          if (nextResponse && primaryAgent) {
-            const responseAgentId = nextResponse.agent_id || nextResponse.agent;
-            // Only create user interaction if the responding agent is the primary agent
-            if (responseAgentId === primaryAgent) {
+          // User only directly interacts with the primary agent
+          if (primaryAgent && event.agent !== 'User') {
+            const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
+            if (nextResponse && nextResponse.agent === primaryAgent) {
               flow.userInteractions.push({
                 agent: primaryAgent,
                 eventIndex: index,
@@ -89,11 +85,10 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           break;
 
         case 'agent_response':
-          // Only primary agent responds directly to user - use agent_id for comparison
-          const responseAgentId = event.agent_id || event.agent;
-          if (responseAgentId === primaryAgent) {
+          // Only primary agent responds directly to user
+          if (event.agent === primaryAgent) {
             flow.userInteractions.push({
-              agent: responseAgentId,
+              agent: event.agent,
               eventIndex: index,
               type: 'response'
             });
@@ -101,26 +96,25 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           break;
 
         case 'handoff':
-          // Agent is handing off to another agent - use agent_ids for node keys
-          if (event.details?.from_agent_id && event.details?.to_agent_id) {
-            flow.agents.set(event.details.from_agent_id, event.details.from_agent || event.details.from_agent_id);
-            flow.agents.set(event.details.to_agent_id, event.details.to_agent || event.details.to_agent_id);
+          // Agent is handing off to another agent
+          if (event.details?.from_agent && event.details?.to_agent) {
+            flow.agents.add(event.details.from_agent);
+            flow.agents.add(event.details.to_agent);
             flow.handoffs.push({
-              from: event.details.from_agent_id,
-              to: event.details.to_agent_id,
+              from: event.details.from_agent,
+              to: event.details.to_agent,
               eventIndex: index
             });
           }
           break;
 
         case 'tool_call':
-          // Agent is using a tool (tools are NOT separate agents) - use agent_id for keying
+          // Agent is using a tool (tools are NOT separate agents)
           if (event.agent !== 'User' && event.details?.tool_name) {
-            const agentId = event.agent_id || event.agent;
-            flow.agents.set(agentId, event.agent);
-            flow.tools.set(event.details.tool_name, agentId);
+            flow.agents.add(event.agent);
+            flow.tools.set(event.details.tool_name, event.agent);
             flow.toolCalls.push({
-              agent: agentId,
+              agent: event.agent,
               tool: event.details.tool_name,
               eventIndex: index
             });
@@ -134,18 +128,17 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
 
   // Generate nodes and edges based on session flow
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    const agentEntries = Array.from(sessionFlow.agents.entries()); // [agent_id, display_name] pairs
+    const agents = Array.from(sessionFlow.agents);
     const tools = Array.from(sessionFlow.tools.keys());
 
-    // Find primary agent (first to respond to user) - use agent_id for comparison
+    // Find primary agent (first to respond to user)
     const agentFirstResponse = new Map<string, number>();
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
     
     nonViolationEvents.forEach((event, index) => {
       if (event.type === 'agent_response' && event.agent !== 'User') {
-        const agentId = event.agent_id || event.agent;
-        if (!agentFirstResponse.has(agentId)) {
-          agentFirstResponse.set(agentId, index);
+        if (!agentFirstResponse.has(event.agent)) {
+          agentFirstResponse.set(event.agent, index);
         }
       }
     });
@@ -154,7 +147,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       ? Array.from(agentFirstResponse.entries()).sort((a, b) => a[1] - b[1])[0][0]
       : null;
 
-    // Clean hierarchical layout with proper spacing to avoid overlaps - use agent_id for positioning
+    // Clean hierarchical layout with proper spacing to avoid overlaps
     const agentPositions: Record<string, { x: number; y: number }> = {};
     
     // User at top center
@@ -166,13 +159,13 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     }
     
     // Sub-agents in horizontal row below primary agent with proper spacing
-    const subAgents = agentEntries.filter(([agentId, displayName]) => agentId !== 'User' && agentId !== primaryAgent);
+    const subAgents = agents.filter(agent => agent !== 'User' && agent !== primaryAgent);
     
     // Sort sub-agents for consistent ordering (File System, Web Search, Summarizer pattern)
     const agentOrder = ['File System Agent', 'Web Search Agent', 'Summarizer Agent'];
-    const sortedSubAgents = subAgents.sort(([aId, aName], [bId, bName]) => {
-      const aIndex = agentOrder.findIndex(name => aName.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
-      const bIndex = agentOrder.findIndex(name => bName.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
+    const sortedSubAgents = subAgents.sort((a, b) => {
+      const aIndex = agentOrder.findIndex(name => a.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
+      const bIndex = agentOrder.findIndex(name => b.toLowerCase().includes(name.toLowerCase().split(' ')[0]));
       if (aIndex === -1) return 1;
       if (bIndex === -1) return -1;
       return aIndex - bIndex;
@@ -183,8 +176,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     const totalSubAgentWidth = Math.max((sortedSubAgents.length - 1) * minAgentSpacing, 0);
     const subAgentStartX = 500 - (totalSubAgentWidth / 2);
     
-    sortedSubAgents.forEach(([agentId, displayName], index) => {
-      agentPositions[agentId] = { 
+    sortedSubAgents.forEach((agent, index) => {
+      agentPositions[agent] = { 
         x: subAgentStartX + (index * minAgentSpacing), 
         y: 400 
       };
@@ -196,17 +189,17 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     
     // Count tools per agent
     tools.forEach((tool) => {
-      const parentAgentId = sessionFlow.tools.get(tool); // This returns agent_id now
-      if (parentAgentId) {
-        agentToolCounts.set(parentAgentId, (agentToolCounts.get(parentAgentId) || 0) + 1);
+      const parentAgent = sessionFlow.tools.get(tool);
+      if (parentAgent) {
+        agentToolCounts.set(parentAgent, (agentToolCounts.get(parentAgent) || 0) + 1);
       }
     });
     
     tools.forEach((tool) => {
-      const parentAgentId = sessionFlow.tools.get(tool); // This returns agent_id now
-      if (parentAgentId && agentPositions[parentAgentId]) {
-        const basePos = agentPositions[parentAgentId];
-        const toolsForAgent = tools.filter(t => sessionFlow.tools.get(t) === parentAgentId);
+      const parentAgent = sessionFlow.tools.get(tool);
+      if (parentAgent && agentPositions[parentAgent]) {
+        const basePos = agentPositions[parentAgent];
+        const toolsForAgent = tools.filter(t => sessionFlow.tools.get(t) === parentAgent);
         const toolIndex = toolsForAgent.indexOf(tool);
         const totalTools = toolsForAgent.length;
         
@@ -225,19 +218,19 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       }
     });
 
-    // Create agent nodes - use agent_id as node key, display_name as label
-    const nodes: Node[] = agentEntries.map(([agentId, displayName]) => {
-      const colorClass = getAgentColorClass(displayName);
-      const isActive = events.slice(0, currentEventIndex + 1).some(e => (e.agent_id || e.agent) === agentId);
-      const hasViolations = events.some(e => (e.agent_id || e.agent) === agentId && e.detections && e.detections.length > 0);
+    // Create agent nodes
+    const nodes: Node[] = agents.map((agent) => {
+      const colorClass = getAgentColorClass(agent);
+      const isActive = events.slice(0, currentEventIndex + 1).some(e => e.agent === agent);
+      const hasViolations = events.some(e => e.agent === agent && e.detections && e.detections.length > 0);
 
       return {
-        id: agentId, // Use agent_id as node key
+        id: agent,
         type: 'default',
-        position: agentPositions[agentId] || { x: 400, y: 400 },
+        position: agentPositions[agent] || { x: 400, y: 400 },
         data: { 
-          label: displayName, // Use display_name as label
-          category: agentId === 'User' ? 'user' : 'agent',
+          label: agent,
+          category: agent === 'User' ? 'user' : 'agent',
         },
         style: {
           backgroundColor: `hsl(var(--${colorClass}))`,
@@ -262,8 +255,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     // Create tool nodes (smaller, connected to their agents)
     tools.forEach((tool) => {
       const colorClass = 'tool-call';
-      const parentAgentId = sessionFlow.tools.get(tool); // This returns agent_id now
-      const parentAgentName = parentAgentId ? sessionFlow.agents.get(parentAgentId) : undefined;
+      const parentAgent = sessionFlow.tools.get(tool);
       const isActive = events.slice(0, currentEventIndex + 1).some(e => 
         e.type === 'tool_call' && e.details?.tool_name === tool
       );
@@ -275,8 +267,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         data: { 
           label: tool,
           category: 'tool',
-          parentAgent: parentAgentName, // Use display name for data
-          parentAgentId: parentAgentId, // Store agent_id for reference
+          parentAgent,
         },
         style: {
           backgroundColor: `hsl(var(--${colorClass}))`,
@@ -310,32 +301,32 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           const nextResponse = events.slice(currentEventIndex + 1).find(e => e.type === 'agent_response');
           return edgeType === 'user_interaction' && 
                  sourceId === 'User' && 
-                 targetId === (nextResponse?.agent_id || nextResponse?.agent);
+                 targetId === nextResponse?.agent;
                  
         case 'tool_call':
           // Agent uses tool - show arrow from agent to tool
           return edgeType === 'tool_call' && 
-                 sourceId === (currentEvent.agent_id || currentEvent.agent) && 
+                 sourceId === currentEvent.agent && 
                  targetId === currentEvent.details?.tool_name;
                  
         case 'agent_response':
           // Agent responds - show arrow from agent to user
           return edgeType === 'user_interaction' && 
-                 sourceId === (currentEvent.agent_id || currentEvent.agent) && 
+                 sourceId === currentEvent.agent && 
                  targetId === 'User';
                  
         case 'handoff':
           // Agent handoff - show arrow from source to target agent
           return edgeType === 'handoff' && 
-                 sourceId === currentEvent.details?.from_agent_id && 
-                 targetId === currentEvent.details?.to_agent_id;
+                 sourceId === currentEvent.details?.from_agent && 
+                 targetId === currentEvent.details?.to_agent;
                  
         default:
           return false;
       }
     };
 
-    // 1. User interactions (User <-> Agent) - bidirectional connections using agent_id
+    // 1. User interactions (User <-> Agent) - bidirectional connections
     const processedUserInteractions = new Set<string>();
     sessionFlow.userInteractions.forEach((interaction) => {
       const edgeKey = `User-${interaction.agent}`;
@@ -343,8 +334,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         processedUserInteractions.add(edgeKey);
         
         const isActive = interaction.eventIndex <= currentEventIndex;
-        const agentDisplayName = sessionFlow.agents.get(interaction.agent) || interaction.agent;
-        const colorClass = getAgentColorClass(agentDisplayName);
+        const colorClass = getAgentColorClass(interaction.agent);
         const showArrowToAgent = shouldShowArrow('User', interaction.agent, 'user_interaction');
         const showArrowToUser = shouldShowArrow(interaction.agent, 'User', 'user_interaction');
 
@@ -385,11 +375,10 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       }
     });
 
-    // 2. Handoffs (Agent -> Agent) - using agent_id for connections
+    // 2. Handoffs (Agent -> Agent)
     sessionFlow.handoffs.forEach((handoff, index) => {
       const isActive = handoff.eventIndex <= currentEventIndex;
-      const fromDisplayName = sessionFlow.agents.get(handoff.from) || handoff.from;
-      const colorClass = getAgentColorClass(fromDisplayName);
+      const colorClass = getAgentColorClass(handoff.from);
       const showArrow = shouldShowArrow(handoff.from, handoff.to, 'handoff');
 
       edges.push({
@@ -423,11 +412,10 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       });
     });
 
-    // 3. Tool calls (Agent -> Tool) - using agent_id for connections
+    // 3. Tool calls (Agent -> Tool)
     sessionFlow.toolCalls.forEach((toolCall, index) => {
       const isActive = toolCall.eventIndex <= currentEventIndex;
-      const agentDisplayName = sessionFlow.agents.get(toolCall.agent) || toolCall.agent;
-      const colorClass = getAgentColorClass(agentDisplayName);
+      const colorClass = getAgentColorClass(toolCall.agent);
       const showArrow = shouldShowArrow(toolCall.agent, toolCall.tool, 'tool_call');
 
       edges.push({

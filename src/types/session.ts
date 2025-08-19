@@ -38,7 +38,6 @@ export interface ChatMessage {
 export interface AgentResponse {
   timestamp: string;
   agent: string;
-  agent_id: string; // Add agent_id field for proper node keying
   input: string;
   response: string;
   duration_seconds: number;
@@ -47,7 +46,6 @@ export interface AgentResponse {
   tools_used: ToolUsage[];
   request_id: string;
   response_id: string;
-  trace_id?: string; // Add trace_id for fallback correlation
   agent_metadata: {
     outer_agent: AgentMetadata;
     actual_agent: AgentMetadata;
@@ -104,16 +102,13 @@ export interface ProcessedEvent {
   timestamp: string;
   type: 'user_message' | 'agent_response' | 'handoff' | 'tool_call' | 'violation';
   agent: string;
-  agent_id?: string; // Add agent_id for proper graph node keying
   content: string;
   duration?: number;
   detections?: any[]; // Security violations/detections for this event
   severity?: 'low' | 'medium' | 'high' | 'critical'; // For violation events
   details?: {
     from_agent?: string;
-    from_agent_id?: string; // Agent ID for graph building
     to_agent?: string;
-    to_agent_id?: string; // Agent ID for graph building
     reason?: string;
     handoff_type?: string;
     tool_name?: string;

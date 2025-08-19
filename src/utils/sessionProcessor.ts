@@ -19,18 +19,10 @@ export function processSessionData(sessionData: ApiSessionResponse): {
     detectionsData: detections
   });
   
-  // Create maps of agent responses for quick lookup - use request_id primarily, trace_id as fallback
-  const responsesByRequestId = new Map();
-  const responsesByTraceId = new Map();
+  // Create a map of agent responses for quick lookup
+  const responseMap = new Map();
   agentResponses.forEach(response => {
-    // Primary lookup by request_id
-    if (response.request_id) {
-      responsesByRequestId.set(response.request_id, response);
-    }
-    // Fallback lookup by trace_id
-    if (response.trace_id) {
-      responsesByTraceId.set(response.trace_id, response);
-    }
+    responseMap.set(response.request_id, response);
   });
   
   // Create a map of detections by message_id, message_index, request_id, and trace_id
@@ -101,12 +93,8 @@ export function processSessionData(sessionData: ApiSessionResponse): {
       
       console.log('🔍 User message:', message.message_id, 'detections:', userDetections.length, userDetections);
       
-      // Check for corresponding agent response using request_id first, then trace_id fallback
-      let agentResponse = responsesByRequestId.get(message.request_id);
-      if (!agentResponse && message.message_id) {
-        // Fallback: try to match trace_id with message_id
-        agentResponse = responsesByTraceId.get(message.message_id);
-      }
+      // Check for corresponding agent response
+      const agentResponse = responseMap.get(message.request_id || message.message_id);
       if (agentResponse) {
         console.log('🔍 Agent response found:', agentResponse.response_id);
         // Calculate timestamps for proper ordering
@@ -123,9 +111,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
             content: `Handoff to ${AgentNameService.getCachedAgentName(agentResponse.handoff_details.to_agent) || getCleanAgentName(agentResponse.handoff_details.to_agent)}`,
             details: {
               from_agent: agentResponse.handoff_details.from_agent,
-              from_agent_id: agentResponse.handoff_details.from_agent, // Store agent_id for graph building
               to_agent: agentResponse.handoff_details.to_agent,
-              to_agent_id: agentResponse.handoff_details.to_agent, // Store agent_id for graph building
               reason: agentResponse.handoff_details.reason,
               handoff_type: agentResponse.handoff_details.handoff_type
             }
@@ -143,8 +129,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
             id: `${agentResponse.response_id}-tool-${toolIndex}`,
             timestamp: toolTimestamp,
             type: 'tool_call',
-            agent: AgentNameService.getCachedAgentName(agentResponse.agent_id || agentResponse.agent) || getCleanAgentName(agentResponse.agent_id || agentResponse.agent),
-            agent_id: agentResponse.agent_id || agentResponse.agent, // Store agent_id for graph building
+            agent: AgentNameService.getCachedAgentName(agentResponse.agent) || getCleanAgentName(agentResponse.agent),
             content: `Using ${tool.tool_name}`,
             details: {
               tool_name: tool.tool_name,
@@ -169,8 +154,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
           id: agentResponse.response_id,
           timestamp: agentResponse.timestamp,
           type: 'agent_response',
-          agent: AgentNameService.getCachedAgentName(agentResponse.agent_id || agentResponse.agent) || getCleanAgentName(agentResponse.agent_id || agentResponse.agent),
-          agent_id: agentResponse.agent_id || agentResponse.agent, // Store agent_id for graph building
+          agent: AgentNameService.getCachedAgentName(agentResponse.agent) || getCleanAgentName(agentResponse.agent),
           content: agentResponse.response,
           duration: agentResponse.duration_seconds,
           detections: responseDetections,
