@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Shield, Users, MessageSquare, AlertTriangle, BarChart3, Settings, HelpCircle } from 'lucide-react';
+import { Home, Shield, Users, MessageSquare, AlertTriangle, Settings, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 interface ModernSidebarProps {
   className?: string;
