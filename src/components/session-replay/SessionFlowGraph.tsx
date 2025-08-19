@@ -48,28 +48,55 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     // Filter out violation events for flow analysis
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
     
-    // Find the primary agent (the one user directly interacts with)
-    let primaryAgent: string | null = null;
+    // First pass: collect all unique agents to avoid duplicates
+    const uniqueAgents = new Map<string, string>(); // agent_id -> display_name
     const agentFirstResponse = new Map<string, number>();
 
-    // First pass: identify all agents and find the primary one - use agent_id for keying
     nonViolationEvents.forEach((event, index) => {
-      if (event.type === 'agent_response' && event.agent !== 'User') {
+      // Collect agents from all event types
+      if (event.agent !== 'User') {
         const agentId = event.agent_id || event.agent;
         const displayName = event.agent;
-        flow.agents.set(agentId, displayName);
-        if (!agentFirstResponse.has(agentId)) {
+        
+        // Only add if not already exists to prevent duplicates
+        if (!uniqueAgents.has(agentId)) {
+          uniqueAgents.set(agentId, displayName);
+        }
+        
+        // Track first response for primary agent determination
+        if (event.type === 'agent_response' && !agentFirstResponse.has(agentId)) {
           agentFirstResponse.set(agentId, index);
+        }
+      }
+      
+      // Collect agents from handoff events
+      if (event.type === 'handoff' && event.details) {
+        if (event.details.from_agent_id) {
+          const fromDisplayName = event.details.from_agent || event.details.from_agent_id;
+          if (!uniqueAgents.has(event.details.from_agent_id)) {
+            uniqueAgents.set(event.details.from_agent_id, fromDisplayName);
+          }
+        }
+        if (event.details.to_agent_id) {
+          const toDisplayName = event.details.to_agent || event.details.to_agent_id;
+          if (!uniqueAgents.has(event.details.to_agent_id)) {
+            uniqueAgents.set(event.details.to_agent_id, toDisplayName);
+          }
         }
       }
     });
 
-    // The primary agent is the first one to respond to user
-    if (agentFirstResponse.size > 0) {
-      primaryAgent = Array.from(agentFirstResponse.entries())
-        .sort((a, b) => a[1] - b[1])[0][0];
-    }
+    // Add all unique agents to flow
+    uniqueAgents.forEach((displayName, agentId) => {
+      flow.agents.set(agentId, displayName);
+    });
 
+    // Find the primary agent (the one user directly interacts with)
+    const primaryAgent = agentFirstResponse.size > 0 
+      ? Array.from(agentFirstResponse.entries()).sort((a, b) => a[1] - b[1])[0][0]
+      : null;
+
+    // Second pass: build interactions, handoffs, and tool calls
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
@@ -101,8 +128,6 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         case 'handoff':
           // Agent is handing off to another agent - use agent_ids for node keys
           if (event.details?.from_agent_id && event.details?.to_agent_id) {
-            flow.agents.set(event.details.from_agent_id, event.details.from_agent || event.details.from_agent_id);
-            flow.agents.set(event.details.to_agent_id, event.details.to_agent || event.details.to_agent_id);
             flow.handoffs.push({
               from: event.details.from_agent_id,
               to: event.details.to_agent_id,
@@ -115,7 +140,6 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           // Agent is using a tool (tools are NOT separate agents) - use agent_id for keying
           if (event.agent !== 'User' && event.details?.tool_name) {
             const agentId = event.agent_id || event.agent;
-            flow.agents.set(agentId, event.agent);
             flow.tools.set(event.details.tool_name, agentId);
             flow.toolCalls.push({
               agent: agentId,
