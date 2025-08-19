@@ -48,44 +48,57 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     // Filter out violation events for flow analysis
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
     
-    // Build response index by request_id and derive primary agent from earliest response
-    const respByReq = new Map<string, { agentId: string; index: number }>();
+    // Find the primary agent (the one user directly interacts with)
+    let primaryAgent: string | null = null;
+    const agentFirstResponse = new Map<string, number>();
 
+    // First pass: identify all agents and find the primary one - use agent_id for keying
     nonViolationEvents.forEach((event, index) => {
-      if (event.type === 'agent_response' && event.request_id) {
+      if (event.type === 'agent_response' && event.agent !== 'User') {
         const agentId = event.agent_id || event.agent;
-        respByReq.set(event.request_id, { agentId, index });
-        flow.agents.set(agentId, event.agent); // ensure agent node exists
+        const displayName = event.agent;
+        flow.agents.set(agentId, displayName);
+        if (!agentFirstResponse.has(agentId)) {
+          agentFirstResponse.set(agentId, index);
+        }
       }
     });
 
-    // primary agent = earliest responding agent by index
-    const primaryAgent = respByReq.size > 0
-      ? Array.from(respByReq.values()).sort((a, b) => a.index - b.index)[0].agentId
-      : null;
+    // The primary agent is the first one to respond to user
+    if (agentFirstResponse.size > 0) {
+      primaryAgent = Array.from(agentFirstResponse.entries())
+        .sort((a, b) => a[1] - b[1])[0][0];
+    }
 
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
-        case 'user_message': {
-          const rec = event.request_id ? respByReq.get(event.request_id) : undefined;
-          if (rec) {
+        case 'user_message':
+          // Find the next agent response to determine which agent handles this user message
+          const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
+          if (nextResponse && primaryAgent) {
+            const responseAgentId = nextResponse.agent_id || nextResponse.agent;
+            // Only create user interaction if the responding agent is the primary agent
+            if (responseAgentId === primaryAgent) {
+              flow.userInteractions.push({
+                agent: primaryAgent,
+                eventIndex: index,
+                type: 'request'
+              });
+            }
+          }
+          break;
+
+        case 'agent_response':
+          // Only primary agent responds directly to user - use agent_id for comparison
+          const responseAgentId = event.agent_id || event.agent;
+          if (responseAgentId === primaryAgent) {
             flow.userInteractions.push({
-              agent: rec.agentId,
+              agent: responseAgentId,
               eventIndex: index,
-              type: 'request',
+              type: 'response'
             });
           }
           break;
-        }
-        case 'agent_response': {
-          const agentId = event.agent_id || event.agent;
-          flow.userInteractions.push({
-            agent: agentId,
-            eventIndex: index,
-            type: 'response',
-          });
-          break;
-        }
 
         case 'handoff':
           // Agent is handing off to another agent - use agent_ids for node keys
@@ -287,39 +300,36 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     const edges: Edge[] = [];
     const currentEvent = events[currentEventIndex];
 
-    // Build response index for arrow logic (reuse from sessionFlow)
-    const respByReqForArrows = new Map<string, { agentId: string; index: number }>();
-    const eventsForArrows = events.filter(event => event.type !== 'violation');
-    
-    eventsForArrows.forEach((event, index) => {
-      if (event.type === 'agent_response' && event.request_id) {
-        const agentId = event.agent_id || event.agent;
-        respByReqForArrows.set(event.request_id, { agentId, index });
-      }
-    });
-
     // Helper function to check if edge should show arrow based on current event
     const shouldShowArrow = (sourceId: string, targetId: string, edgeType: string): boolean => {
       if (!currentEvent) return false;
-
+      
       switch (currentEvent.type) {
-        case 'user_message': {
-          const rec = currentEvent.request_id ? respByReqForArrows.get(currentEvent.request_id) : undefined;
-          const targetAgent = rec?.agentId;
-          return edgeType === 'user_interaction' && sourceId === 'User' && targetId === targetAgent;
-        }
-        case 'agent_response':
-          return edgeType === 'user_interaction' &&
-                 sourceId === (currentEvent.agent_id || currentEvent.agent) &&
-                 targetId === 'User';
+        case 'user_message':
+          // User asks question - show arrow from user to target agent
+          const nextResponse = events.slice(currentEventIndex + 1).find(e => e.type === 'agent_response');
+          return edgeType === 'user_interaction' && 
+                 sourceId === 'User' && 
+                 targetId === (nextResponse?.agent_id || nextResponse?.agent);
+                 
         case 'tool_call':
-          return edgeType === 'tool_call' &&
-                 sourceId === (currentEvent.agent_id || currentEvent.agent) &&
+          // Agent uses tool - show arrow from agent to tool
+          return edgeType === 'tool_call' && 
+                 sourceId === (currentEvent.agent_id || currentEvent.agent) && 
                  targetId === currentEvent.details?.tool_name;
+                 
+        case 'agent_response':
+          // Agent responds - show arrow from agent to user
+          return edgeType === 'user_interaction' && 
+                 sourceId === (currentEvent.agent_id || currentEvent.agent) && 
+                 targetId === 'User';
+                 
         case 'handoff':
-          return edgeType === 'handoff' &&
-                 sourceId === currentEvent.details?.from_agent_id &&
+          // Agent handoff - show arrow from source to target agent
+          return edgeType === 'handoff' && 
+                 sourceId === currentEvent.details?.from_agent_id && 
                  targetId === currentEvent.details?.to_agent_id;
+                 
         default:
           return false;
       }
