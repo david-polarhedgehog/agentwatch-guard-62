@@ -97,7 +97,6 @@ export function processSessionData(sessionData: ApiSessionResponse): {
         agent: 'User',
         content: message.content,
         detections: userDetections,
-        request_id: message.request_id,
       });
       
       console.log('🔍 User message:', message.message_id, 'detections:', userDetections.length, userDetections);
@@ -175,7 +174,6 @@ export function processSessionData(sessionData: ApiSessionResponse): {
           content: agentResponse.response,
           duration: agentResponse.duration_seconds,
           detections: responseDetections,
-          request_id: agentResponse.request_id,
           details: {
             handoff_occurred: agentResponse.handoff_occurred,
           }
