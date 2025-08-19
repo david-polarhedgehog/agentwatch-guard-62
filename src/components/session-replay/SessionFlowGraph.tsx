@@ -82,6 +82,17 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     
     console.log('🔍 [GRAPH DEBUG] Second pass: collecting unique agents with consistent keys...');
     nonViolationEvents.forEach((event, index) => {
+      // Helper function to add an agent (used for all agent sources)
+      const addAgent = (agentId: string, displayName: string, source: string) => {
+        if (!uniqueAgents.has(agentId)) {
+          uniqueAgents.set(agentId, displayName);
+          console.log(`🔍 [GRAPH DEBUG] Added unique agent from ${source}: ${agentId} -> ${displayName}`);
+        } else {
+          console.log(`🔍 [GRAPH DEBUG] Agent already exists from ${source}: ${agentId} (skipping duplicate)`);
+        }
+      };
+
+      // Collect agents from regular events (non-User)
       if (event.agent !== 'User') {
         let agentId: string;
         let displayName: string;
@@ -106,14 +117,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         }
         
         console.log(`🔍 [GRAPH DEBUG] Event ${index}: type=${event.type}, agent="${event.agent}", agent_id="${event.agent_id}", resolved_key="${agentId}"`);
-        
-        // Only add if not already exists
-        if (!uniqueAgents.has(agentId)) {
-          uniqueAgents.set(agentId, displayName);
-          console.log(`🔍 [GRAPH DEBUG] Added unique agent: ${agentId} -> ${displayName}`);
-        } else {
-          console.log(`🔍 [GRAPH DEBUG] Agent already exists: ${agentId} (skipping duplicate)`);
-        }
+        addAgent(agentId, displayName, `regular_event_${event.type}`);
         
         // Track first response for primary agent determination (update with resolved agent_id)
         if (event.type === 'agent_response' && !agentFirstResponse.has(agentId)) {
@@ -122,21 +126,15 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         }
       }
       
-      // Collect agents from handoff events
+      // Collect agents from handoff events (do this WITHIN the same logic to prevent duplicates)
       if (event.type === 'handoff' && event.details) {
         if (event.details.from_agent_id) {
           const fromDisplayName = event.details.from_agent || event.details.from_agent_id;
-          if (!uniqueAgents.has(event.details.from_agent_id)) {
-            uniqueAgents.set(event.details.from_agent_id, fromDisplayName);
-            console.log(`🔍 [GRAPH DEBUG] Added handoff from agent: ${event.details.from_agent_id} -> ${fromDisplayName}`);
-          }
+          addAgent(event.details.from_agent_id, fromDisplayName, 'handoff_from');
         }
         if (event.details.to_agent_id) {
           const toDisplayName = event.details.to_agent || event.details.to_agent_id;
-          if (!uniqueAgents.has(event.details.to_agent_id)) {
-            uniqueAgents.set(event.details.to_agent_id, toDisplayName);
-            console.log(`🔍 [GRAPH DEBUG] Added handoff to agent: ${event.details.to_agent_id} -> ${toDisplayName}`);
-          }
+          addAgent(event.details.to_agent_id, toDisplayName, 'handoff_to');
         }
       }
     });
