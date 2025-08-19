@@ -109,6 +109,7 @@ export interface ProcessedEvent {
   duration?: number;
   detections?: any[]; // Security violations/detections for this event
   severity?: 'low' | 'medium' | 'high' | 'critical'; // For violation events
+  request_id?: string; // Add request_id for correlation
   details?: {
     from_agent?: string;
     from_agent_id?: string; // Agent ID for graph building
