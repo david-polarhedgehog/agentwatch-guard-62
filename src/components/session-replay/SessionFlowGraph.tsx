@@ -73,10 +73,12 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
-          // User only directly interacts with the primary agent
-          if (primaryAgent && event.agent !== 'User') {
-            const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
-            if (nextResponse && (nextResponse.agent_id || nextResponse.agent) === primaryAgent) {
+          // Find the next agent response to determine which agent handles this user message
+          const nextResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
+          if (nextResponse && primaryAgent) {
+            const responseAgentId = nextResponse.agent_id || nextResponse.agent;
+            // Only create user interaction if the responding agent is the primary agent
+            if (responseAgentId === primaryAgent) {
               flow.userInteractions.push({
                 agent: primaryAgent,
                 eventIndex: index,
@@ -194,17 +196,17 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     
     // Count tools per agent
     tools.forEach((tool) => {
-      const parentAgent = sessionFlow.tools.get(tool);
-      if (parentAgent) {
-        agentToolCounts.set(parentAgent, (agentToolCounts.get(parentAgent) || 0) + 1);
+      const parentAgentId = sessionFlow.tools.get(tool); // This returns agent_id now
+      if (parentAgentId) {
+        agentToolCounts.set(parentAgentId, (agentToolCounts.get(parentAgentId) || 0) + 1);
       }
     });
     
     tools.forEach((tool) => {
-      const parentAgent = sessionFlow.tools.get(tool);
-      if (parentAgent && agentPositions[parentAgent]) {
-        const basePos = agentPositions[parentAgent];
-        const toolsForAgent = tools.filter(t => sessionFlow.tools.get(t) === parentAgent);
+      const parentAgentId = sessionFlow.tools.get(tool); // This returns agent_id now
+      if (parentAgentId && agentPositions[parentAgentId]) {
+        const basePos = agentPositions[parentAgentId];
+        const toolsForAgent = tools.filter(t => sessionFlow.tools.get(t) === parentAgentId);
         const toolIndex = toolsForAgent.indexOf(tool);
         const totalTools = toolsForAgent.length;
         
@@ -260,7 +262,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     // Create tool nodes (smaller, connected to their agents)
     tools.forEach((tool) => {
       const colorClass = 'tool-call';
-      const parentAgent = sessionFlow.tools.get(tool);
+      const parentAgentId = sessionFlow.tools.get(tool); // This returns agent_id now
+      const parentAgentName = parentAgentId ? sessionFlow.agents.get(parentAgentId) : undefined;
       const isActive = events.slice(0, currentEventIndex + 1).some(e => 
         e.type === 'tool_call' && e.details?.tool_name === tool
       );
@@ -272,7 +275,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         data: { 
           label: tool,
           category: 'tool',
-          parentAgent,
+          parentAgent: parentAgentName, // Use display name for data
+          parentAgentId: parentAgentId, // Store agent_id for reference
         },
         style: {
           backgroundColor: `hsl(var(--${colorClass}))`,
