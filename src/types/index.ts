@@ -35,6 +35,7 @@ export interface Session {
   session_id: string;
   agent_id: string; // Keep for backward compatibility
   agents?: Record<string, string>; // New field: { "Agent Name": "agent_id" }
+  agents_used?: string[]; // Array of agent IDs used in the session
   created_at: string;
   message_count: number;
   detection_count: number;

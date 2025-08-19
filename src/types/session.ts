@@ -3,6 +3,7 @@ export interface SessionSummary {
   session_id: string;
   created_at: string;
   current_task: string;
+  agents_used?: string[];
 }
 
 export interface ApiSessionResponse {

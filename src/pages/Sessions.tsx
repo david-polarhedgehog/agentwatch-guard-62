@@ -350,7 +350,26 @@ export default function Sessions() {
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-1.5">
-                          {session.agents ? (
+                          {session.agents_used && session.agents_used.length > 0 ? (
+                            session.agents_used.map((agentId) => (
+                              <div
+                                key={agentId}
+                                className="cursor-pointer"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/agents/${agentId}`);
+                                }}
+                              >
+                                <EntityBadge
+                                  type="agent"
+                                  label={agentId}
+                                  className="hover:bg-muted/50 transition-colors"
+                                  size="sm"
+                                />
+                              </div>
+                            ))
+                          ) : session.agents ? (
+                            // Fallback for sessions with the legacy agents object
                             Object.entries(session.agents).map(([agentName, agentId]) => (
                               <div
                                 key={agentId}
@@ -369,7 +388,7 @@ export default function Sessions() {
                               </div>
                             ))
                           ) : (
-                            // Fallback for sessions without the new agents field
+                            // Final fallback for sessions without either field
                             <div
                               className="cursor-pointer"
                               onClick={(e) => {
