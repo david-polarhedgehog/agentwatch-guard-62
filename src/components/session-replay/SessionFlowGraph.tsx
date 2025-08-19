@@ -37,6 +37,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
 
   // Analyze session flow to understand the actual conversation structure
   const sessionFlow = useMemo((): SessionFlow => {
+    console.log('🔍 [GRAPH DEBUG] Starting sessionFlow analysis with events:', events.length);
+    
     const flow: SessionFlow = {
       agents: new Map([['User', 'User']]), // Always start with User - agent_id -> display_name
       tools: new Map(),
@@ -47,25 +49,33 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
 
     // Filter out violation events for flow analysis
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
+    console.log('🔍 [GRAPH DEBUG] Non-violation events:', nonViolationEvents.length);
     
     // First pass: collect all unique agents to avoid duplicates
     const uniqueAgents = new Map<string, string>(); // agent_id -> display_name
     const agentFirstResponse = new Map<string, number>();
 
+    console.log('🔍 [GRAPH DEBUG] First pass: collecting unique agents...');
     nonViolationEvents.forEach((event, index) => {
       // Collect agents from all event types
       if (event.agent !== 'User') {
         const agentId = event.agent_id || event.agent;
         const displayName = event.agent;
         
+        console.log(`🔍 [GRAPH DEBUG] Event ${index}: type=${event.type}, agent="${event.agent}", agent_id="${event.agent_id}", computed_agentId="${agentId}"`);
+        
         // Only add if not already exists to prevent duplicates
         if (!uniqueAgents.has(agentId)) {
           uniqueAgents.set(agentId, displayName);
+          console.log(`🔍 [GRAPH DEBUG] Added unique agent: ${agentId} -> ${displayName}`);
+        } else {
+          console.log(`🔍 [GRAPH DEBUG] Agent already exists: ${agentId}`);
         }
         
         // Track first response for primary agent determination
         if (event.type === 'agent_response' && !agentFirstResponse.has(agentId)) {
           agentFirstResponse.set(agentId, index);
+          console.log(`🔍 [GRAPH DEBUG] First response tracked: ${agentId} at index ${index}`);
         }
       }
       
@@ -75,12 +85,14 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           const fromDisplayName = event.details.from_agent || event.details.from_agent_id;
           if (!uniqueAgents.has(event.details.from_agent_id)) {
             uniqueAgents.set(event.details.from_agent_id, fromDisplayName);
+            console.log(`🔍 [GRAPH DEBUG] Added handoff from agent: ${event.details.from_agent_id} -> ${fromDisplayName}`);
           }
         }
         if (event.details.to_agent_id) {
           const toDisplayName = event.details.to_agent || event.details.to_agent_id;
           if (!uniqueAgents.has(event.details.to_agent_id)) {
             uniqueAgents.set(event.details.to_agent_id, toDisplayName);
+            console.log(`🔍 [GRAPH DEBUG] Added handoff to agent: ${event.details.to_agent_id} -> ${toDisplayName}`);
           }
         }
       }
@@ -91,12 +103,19 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       flow.agents.set(agentId, displayName);
     });
 
+    console.log('🔍 [GRAPH DEBUG] Final unique agents map:', Array.from(uniqueAgents.entries()));
+    console.log('🔍 [GRAPH DEBUG] Flow agents map:', Array.from(flow.agents.entries()));
+
     // Find the primary agent (the one user directly interacts with)
     const primaryAgent = agentFirstResponse.size > 0 
       ? Array.from(agentFirstResponse.entries()).sort((a, b) => a[1] - b[1])[0][0]
       : null;
+    
+    console.log('🔍 [GRAPH DEBUG] Primary agent determined:', primaryAgent);
+    console.log('🔍 [GRAPH DEBUG] Agent first responses:', Array.from(agentFirstResponse.entries()));
 
     // Second pass: build interactions, handoffs, and tool calls
+    console.log('🔍 [GRAPH DEBUG] Second pass: building interactions...');
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
@@ -109,6 +128,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
                 eventIndex: index,
                 type: 'request'
               });
+              console.log(`🔍 [GRAPH DEBUG] Added user interaction request: ${primaryAgent} at ${index}`);
             }
           }
           break;
@@ -122,6 +142,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
               eventIndex: index,
               type: 'response'
             });
+            console.log(`🔍 [GRAPH DEBUG] Added user interaction response: ${responseAgentId} at ${index}`);
           }
           break;
 
@@ -133,6 +154,7 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
               to: event.details.to_agent_id,
               eventIndex: index
             });
+            console.log(`🔍 [GRAPH DEBUG] Added handoff: ${event.details.from_agent_id} -> ${event.details.to_agent_id} at ${index}`);
           }
           break;
 
@@ -146,18 +168,30 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
               tool: event.details.tool_name,
               eventIndex: index
             });
+            console.log(`🔍 [GRAPH DEBUG] Added tool call: ${agentId} -> ${event.details.tool_name} at ${index}`);
           }
           break;
       }
     });
+
+    console.log('🔍 [GRAPH DEBUG] Final flow summary:');
+    console.log('🔍 [GRAPH DEBUG] - Agents:', flow.agents.size, Array.from(flow.agents.entries()));
+    console.log('🔍 [GRAPH DEBUG] - Tools:', flow.tools.size, Array.from(flow.tools.entries()));
+    console.log('🔍 [GRAPH DEBUG] - Handoffs:', flow.handoffs.length, flow.handoffs);
+    console.log('🔍 [GRAPH DEBUG] - User interactions:', flow.userInteractions.length, flow.userInteractions);
+    console.log('🔍 [GRAPH DEBUG] - Tool calls:', flow.toolCalls.length, flow.toolCalls);
 
     return flow;
   }, [events]);
 
   // Generate nodes and edges based on session flow
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+    console.log('🔍 [NODE DEBUG] Generating nodes and edges...');
     const agentEntries = Array.from(sessionFlow.agents.entries()); // [agent_id, display_name] pairs
     const tools = Array.from(sessionFlow.tools.keys());
+    
+    console.log('🔍 [NODE DEBUG] Agent entries for node creation:', agentEntries);
+    console.log('🔍 [NODE DEBUG] Tools for node creation:', tools);
 
     // Find primary agent (first to respond to user) - use agent_id for comparison
     const agentFirstResponse = new Map<string, number>();
@@ -253,6 +287,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       const isActive = events.slice(0, currentEventIndex + 1).some(e => (e.agent_id || e.agent) === agentId);
       const hasViolations = events.some(e => (e.agent_id || e.agent) === agentId && e.detections && e.detections.length > 0);
 
+      console.log(`🔍 [NODE DEBUG] Creating node: id="${agentId}", label="${displayName}", position=${JSON.stringify(agentPositions[agentId])}`);
+
       return {
         id: agentId, // Use agent_id as node key
         type: 'default',
@@ -280,6 +316,8 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         className: `transition-all duration-300 ${isActive ? 'scale-110' : 'scale-100'}`,
       };
     });
+
+    console.log(`🔍 [NODE DEBUG] Created ${nodes.length} agent nodes:`, nodes.map(n => ({ id: n.id, label: n.data.label })));
 
     // Create tool nodes (smaller, connected to their agents)
     tools.forEach((tool) => {
