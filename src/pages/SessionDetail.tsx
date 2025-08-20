@@ -17,6 +17,7 @@ import { SessionReplayContainer } from '@/components/session-replay/SessionRepla
 import MultiAgentDashboard from '@/components/session-replay/MultiAgentDashboard';
 import { useSessionReplay } from '@/hooks/useSessionReplay';
 import { useAgentsDisplayInfo } from '@/hooks/useAgentNames';
+import { getAgentColorClass, getCleanAgentName } from '@/utils/sessionProcessor';
 
 // Session Replay Viewer Component
 const SessionReplayViewer = ({
@@ -143,7 +144,7 @@ export default function SessionDetail() {
   // Extract session from the API response which includes agent data
   const session = sessionResponse as any; // The API returns expanded session data
 
-  // Extract agent IDs from session data - include all sources but filter out tools
+  // Extract unique agent IDs from session data - only use agent_id for uniqueness
   const extractInvolvedAgentIds = () => {
     const agentIds = new Set<string>();
 
@@ -153,44 +154,15 @@ export default function SessionDetail() {
       agentIds.add(primaryAgentId);
     }
 
-    // From agent_names field (most comprehensive) - but filter out tools
-    if (session?.agent_names) {
-      Object.keys(session.agent_names).forEach(agentId => {
-        // Filter out tool names (they typically don't contain "agent" and are lowercase)
-        const name = session.agent_names[agentId].toLowerCase();
-        if (name.includes('agent') || name.includes('user') || name === 'user') {
-          agentIds.add(agentId);
-        }
-      });
-    }
-
-    // From agent_responses (extract agent from response metadata) - filter out tools
+    // From agent_responses - use agent_id only for uniqueness
     if (session?.agent_responses) {
       session.agent_responses.forEach((response: any) => {
-        if (response.agent) {
-          const agentName = response.agent.toLowerCase();
-          // Only include if it looks like an agent, not a tool
-          if (agentName.includes('agent') || agentName === 'user' || 
-              !agentName.includes('_') || !agentName.match(/^[a-z_]+$/)) {
-            agentIds.add(response.agent);
-          }
+        if (response.agent_id) {
+          agentIds.add(response.agent_id);
         }
       });
     }
 
-    // From chat_history metadata if available - filter out tools
-    if (session?.chat_history) {
-      session.chat_history.forEach((message: any) => {
-        if (message.agent_id) {
-          const agentName = message.agent_id.toLowerCase();
-          // Only include if it looks like an agent, not a tool
-          if (agentName.includes('agent') || agentName === 'user' || 
-              !agentName.includes('_') || !agentName.match(/^[a-z_]+$/)) {
-            agentIds.add(message.agent_id);
-          }
-        }
-      });
-    }
     return Array.from(agentIds);
   };
   const involvedAgentIds = extractInvolvedAgentIds();
@@ -202,35 +174,22 @@ export default function SessionDetail() {
   const extractInvolvedAgents = () => {
     const agentsMap = new Map();
 
-    // Helper function to get display info
-    const getAgentDisplayInfo = (agentId: string) => {
-      // Try to get name from agent_names field first, then fallback to agent ID
-      const displayName = session?.agent_names?.[agentId] || agentId;
-
-      // Color coding for different agent types
-      let className = 'cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs max-w-full';
-      if (displayName.toLowerCase().includes('customer service')) {
-        className = 'cursor-pointer hover:bg-purple-600 hover:text-white transition-colors text-xs max-w-full bg-purple-100 text-purple-700 border-purple-200';
-      } else if (displayName.toLowerCase().includes('file system')) {
-        className = 'cursor-pointer hover:bg-green-600 hover:text-white transition-colors text-xs max-w-full bg-green-100 text-green-700 border-green-200';
-      }
-      return {
-        cleanName: displayName,
-        variant: 'secondary' as const,
-        className
-      };
-    };
-
     // Process all agents found in extractInvolvedAgentIds
     involvedAgentIds.forEach(agentId => {
       if (!agentsMap.has(agentId)) {
-        const displayInfo = getAgentDisplayInfo(agentId);
+        // Get display name from agent_names field or clean the agent_id
+        const displayName = session?.agent_names?.[agentId] || getCleanAgentName(agentId);
+        
+        // Use consistent color coding from sessionProcessor
+        const colorClass = getAgentColorClass(displayName);
+        const className = `cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs max-w-full agent-${colorClass}`;
+        
         const agentData = {
-          name: session?.agent_names?.[agentId] || displayInfo.cleanName,
+          name: displayName,
           id: agentId,
           rawId: agentId,
-          variant: displayInfo.variant,
-          className: displayInfo.className
+          variant: 'secondary' as const,
+          className
         };
         agentsMap.set(agentId, agentData);
       }

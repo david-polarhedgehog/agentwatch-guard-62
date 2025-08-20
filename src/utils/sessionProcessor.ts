@@ -247,7 +247,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
   return { events: eventsWithViolations, timelineEvents };
 }
 
-function getCleanAgentName(agentId: string): string {
+export function getCleanAgentName(agentId: string): string {
   // Convert agent IDs to readable names (fallback for when API names are not available)
   if (agentId.includes('Customer Service Agent') || agentId.includes('customer_service')) return 'Customer Service Agent';
   if (agentId.includes('File System Agent') || agentId.includes('file_system')) return 'File System Agent';
