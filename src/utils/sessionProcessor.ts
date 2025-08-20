@@ -86,7 +86,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
         ...(detectionMap.get(index) || []),
         ...(detectionByTraceId.get(message.request_id || message.message_id) || [])
       ].filter((detection, index, self) => 
-        index === self.findIndex(d => d.id === detection.id || 
+        index === self.findIndex(d => (d.detection_id || d.id) === (detection.detection_id || detection.id) || 
           (d.message_id === detection.message_id && d.detection_type === detection.detection_type))
       ); // Remove duplicates
       
@@ -161,7 +161,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
           ...(detectionMap.get(index + 1) || []),
           ...(detectionByTraceId.get(agentResponse.response_id) || [])
         ].filter((detection, index, self) => 
-          index === self.findIndex(d => d.id === detection.id || 
+          index === self.findIndex(d => (d.detection_id || d.id) === (detection.detection_id || detection.id) || 
             (d.message_id === detection.message_id && d.detection_type === detection.detection_type))
         ); // Remove duplicates
         
