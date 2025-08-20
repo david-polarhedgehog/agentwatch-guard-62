@@ -222,8 +222,16 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     // Create agent nodes - use agent_id as node key, display_name as label
     const nodes: Node[] = agentEntries.map(([agentId, displayName]) => {
       const colorClass = getAgentColorClass(displayName);
-      const isActive = events.slice(0, currentEventIndex + 1).some(e => (e.agent_id || e.agent) === agentId);
-      const hasViolations = events.some(e => (e.agent_id || e.agent) === agentId && e.detections && e.detections.length > 0);
+      const isActive = events.slice(0, currentEventIndex + 1).some(e => {
+        // Check both agent_id and agent fields, and for User check both
+        return (e.agent_id === agentId) || (e.agent === agentId) || 
+               (agentId === 'User' && e.agent === 'User') ||
+               (e.agent === displayName); // Also check display name match
+      });
+      const hasViolations = events.some(e => {
+        return ((e.agent_id === agentId) || (e.agent === agentId) || (e.agent === displayName)) && 
+               e.detections && e.detections.length > 0;
+      });
 
       return {
         id: agentId, // Use agent_id as node key

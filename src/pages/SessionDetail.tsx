@@ -143,108 +143,56 @@ export default function SessionDetail() {
   // Extract session from the API response which includes agent data
   const session = sessionResponse as any; // The API returns expanded session data
 
-  // Extract agent IDs from session data - include all sources but filter out tools
-  const extractInvolvedAgentIds = () => {
-    const agentIds = new Set<string>();
+  // Extract unique agents from agent_responses - use agent_id for uniqueness but display agent name
+  const extractInvolvedAgents = () => {
+    const uniqueAgents = new Map<string, { name: string; id: string }>();
 
-    // Primary agent
-    const primaryAgentId = session?.agent_id || session?.primary_agent_id;
-    if (primaryAgentId) {
-      agentIds.add(primaryAgentId);
-    }
-
-    // From agent_names field (most comprehensive) - but filter out tools
-    if (session?.agent_names) {
-      Object.keys(session.agent_names).forEach(agentId => {
-        // Filter out tool names (they typically don't contain "agent" and are lowercase)
-        const name = session.agent_names[agentId].toLowerCase();
-        if (name.includes('agent') || name.includes('user') || name === 'user') {
-          agentIds.add(agentId);
-        }
-      });
-    }
-
-    // From agent_responses (extract agent from response metadata) - filter out tools
+    // From agent_responses - this is the most reliable source
     if (session?.agent_responses) {
       session.agent_responses.forEach((response: any) => {
-        if (response.agent) {
-          const agentName = response.agent.toLowerCase();
-          // Only include if it looks like an agent, not a tool
-          if (agentName.includes('agent') || agentName === 'user' || 
-              !agentName.includes('_') || !agentName.match(/^[a-z_]+$/)) {
-            agentIds.add(response.agent);
-          }
+        const agentId = response.agent_id;
+        const agentName = response.agent;
+        const outerAgentId = response.outer_agent_id;
+        const outerAgentName = response.outer_agent;
+        
+        // Add outer agent (the one user directly interacts with)
+        if (outerAgentId && outerAgentName) {
+          uniqueAgents.set(outerAgentId, { name: outerAgentName, id: outerAgentId });
+        }
+        
+        // Add actual agent if different from outer agent
+        if (agentId && agentName && agentId !== outerAgentId) {
+          uniqueAgents.set(agentId, { name: agentName, id: agentId });
         }
       });
     }
 
-    // From chat_history metadata if available - filter out tools
-    if (session?.chat_history) {
-      session.chat_history.forEach((message: any) => {
-        if (message.agent_id) {
-          const agentName = message.agent_id.toLowerCase();
-          // Only include if it looks like an agent, not a tool
-          if (agentName.includes('agent') || agentName === 'user' || 
-              !agentName.includes('_') || !agentName.match(/^[a-z_]+$/)) {
-            agentIds.add(message.agent_id);
-          }
-        }
-      });
-    }
-    return Array.from(agentIds);
-  };
-  const involvedAgentIds = extractInvolvedAgentIds();
-  const {
-    agentsDisplayInfo
-  } = useAgentsDisplayInfo(involvedAgentIds);
-
-  // Extract all involved agents from all available sources
-  const extractInvolvedAgents = () => {
-    const agentsMap = new Map();
-
-    // Helper function to get display info
-    const getAgentDisplayInfo = (agentId: string) => {
-      // Try to get name from agent_names field first, then fallback to agent ID
-      const displayName = session?.agent_names?.[agentId] || agentId;
-
-      // Color coding for different agent types
-      let className = 'cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs max-w-full';
-      if (displayName.toLowerCase().includes('customer service')) {
-        className = 'cursor-pointer hover:bg-purple-600 hover:text-white transition-colors text-xs max-w-full bg-purple-100 text-purple-700 border-purple-200';
-      } else if (displayName.toLowerCase().includes('file system')) {
-        className = 'cursor-pointer hover:bg-green-600 hover:text-white transition-colors text-xs max-w-full bg-green-100 text-green-700 border-green-200';
-      }
-      return {
-        cleanName: displayName,
-        variant: 'secondary' as const,
-        className
-      };
-    };
-
-    // Process all agents found in extractInvolvedAgentIds
-    involvedAgentIds.forEach(agentId => {
-      if (!agentsMap.has(agentId)) {
-        const displayInfo = getAgentDisplayInfo(agentId);
-        const agentData = {
-          name: session?.agent_names?.[agentId] || displayInfo.cleanName,
-          id: agentId,
-          rawId: agentId,
-          variant: displayInfo.variant,
-          className: displayInfo.className
-        };
-        agentsMap.set(agentId, agentData);
-      }
-    });
-    return Array.from(agentsMap.values());
+    return Array.from(uniqueAgents.values());
   };
   const involvedAgents = extractInvolvedAgents();
+
+  // Helper function to get display styling for agent badges
+  const getAgentBadgeStyle = (agentName: string) => {
+    let className = 'cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors text-xs max-w-full';
+    
+    if (agentName.toLowerCase().includes('customer service')) {
+      className = 'cursor-pointer hover:bg-purple-600 hover:text-white transition-colors text-xs max-w-full bg-purple-100 text-purple-700 border-purple-200';
+    } else if (agentName.toLowerCase().includes('file system')) {
+      className = 'cursor-pointer hover:bg-green-600 hover:text-white transition-colors text-xs max-w-full bg-green-100 text-green-700 border-green-200';
+    } else if (agentName.toLowerCase().includes('web search')) {
+      className = 'cursor-pointer hover:bg-blue-600 hover:text-white transition-colors text-xs max-w-full bg-blue-100 text-blue-700 border-blue-200';
+    }
+    
+    return {
+      variant: 'secondary' as const,
+      className
+    };
+  };
 
   // Debug logging for agent information
   console.log('🔍 SessionDetail Debug:', {
     session: session,
     primaryAgentId: session?.agent_id || session?.primary_agent_id,
-    involvedAgentIds,
-    agentsDisplayInfo,
     involvedAgents
   });
 
@@ -319,16 +267,19 @@ export default function SessionDetail() {
               <div className="flex-1 min-w-0">
                 <div className="text-xs text-muted-foreground mb-2">Agents ({involvedAgents.length})</div>
                 <div className="flex flex-wrap gap-1">
-                  {involvedAgents.map((agent) => (
-                    <Badge 
-                      key={agent.id}
-                      variant="secondary"
-                      className={agent.className}
-                      onClick={() => navigate(`/agents/${agent.id}`)}
-                    >
-                      {agent.name}
-                    </Badge>
-                  ))}
+                  {involvedAgents.map((agent) => {
+                    const badgeStyle = getAgentBadgeStyle(agent.name);
+                    return (
+                      <Badge 
+                        key={agent.id}
+                        variant={badgeStyle.variant}
+                        className={badgeStyle.className}
+                        onClick={() => navigate(`/agents/${encodeURIComponent(agent.id)}`)}
+                      >
+                        {agent.name}
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
             </div>

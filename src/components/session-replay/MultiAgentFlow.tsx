@@ -201,7 +201,7 @@ const MultiAgentFlowComponent: React.FC<MultiAgentFlowProps> = ({ events, curren
     const nodes: Node[] = Array.from(allAgents).map((agent) => {
       const colorClass = getAgentColorClass(agent);
       const isActive = events.slice(0, currentEventIndex + 1).some(e => 
-        e.agent === agent || e.details?.tool_name === agent
+        e.agent === agent || e.agent_id === agent || e.details?.tool_name === agent
       );
       
       // Check if this agent has violations in current session
