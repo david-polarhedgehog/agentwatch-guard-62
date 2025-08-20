@@ -115,20 +115,19 @@ export function processSessionData(sessionData: ApiSessionResponse): {
         const handoffTime = responseTime - 100; // 100ms before response
         
         // Add handoff event if it occurred
-        if (agentResponse.handoff_occurred && agentResponse.handoff_details) {
+        if (agentResponse.handoff_occurred) {
           events.push({
             id: `${agentResponse.response_id}-handoff`,
             timestamp: new Date(handoffTime).toISOString(),
             type: 'handoff',
-            agent: AgentNameService.getCachedAgentName(agentResponse.handoff_details.from_agent) || getCleanAgentName(agentResponse.handoff_details.from_agent),
-            content: `Handoff to ${AgentNameService.getCachedAgentName(agentResponse.handoff_details.to_agent) || getCleanAgentName(agentResponse.handoff_details.to_agent)}`,
+            agent: AgentNameService.getCachedAgentName(agentResponse.outer_agent_id || agentResponse.outer_agent) || getCleanAgentName(agentResponse.outer_agent_id || agentResponse.outer_agent),
+            content: `Handoff to ${AgentNameService.getCachedAgentName(agentResponse.agent_id || agentResponse.agent) || getCleanAgentName(agentResponse.agent_id || agentResponse.agent)}`,
             details: {
-              from_agent: agentResponse.handoff_details.from_agent,
-              from_agent_id: agentResponse.handoff_details.from_agent, // Store agent_id for graph building
-              to_agent: agentResponse.handoff_details.to_agent,
-              to_agent_id: agentResponse.handoff_details.to_agent, // Store agent_id for graph building
-              reason: agentResponse.handoff_details.reason,
-              handoff_type: agentResponse.handoff_details.handoff_type
+              from_agent: agentResponse.outer_agent,
+              from_agent_id: agentResponse.outer_agent_id,
+              to_agent: agentResponse.agent,
+              to_agent_id: agentResponse.agent_id,
+              handoff_type: 'agent_handoff'
             }
           });
         }
