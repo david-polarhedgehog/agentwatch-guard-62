@@ -250,57 +250,66 @@ const EventFeed: React.FC<EventFeedProps> = ({
                           </div> : <p>{event.content}</p>}
                      </div>}
                      
-                      {/* Always show violation section for events with violations */}
-                     {eventHasViolations && (() => {
+                       {/* Show each violation as a separate collapsible section, ordered by severity */}
+                      {eventHasViolations && (() => {
                   const sortedViolations = sortViolationsBySeverity(event.detections || []);
-                  const mostSevereViolation = sortedViolations[0];
-                  return <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg space-y-2 cursor-pointer hover:bg-red-100 transition-colors" onClick={e => {
-                    e.stopPropagation();
-                    toggleViolationExpansion(event.id);
-                  }}>
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2">
-                                <AlertTriangle className="h-4 w-4 text-red-600" />
-                                {mostSevereViolation && <div className="flex items-center gap-2">
-                                    <Badge variant="destructive" className={`text-xs ${mostSevereViolation.severity === 'critical' ? 'bg-red-600' : mostSevereViolation.severity === 'high' ? 'bg-red-500' : mostSevereViolation.severity === 'medium' ? 'bg-orange-500' : 'bg-yellow-500'}`}>
-                                      {mostSevereViolation.severity?.toUpperCase()}
-                                    </Badge>
-                                    <h4 className="text-sm font-medium text-red-800">
-                                      {mostSevereViolation.violation_name || mostSevereViolation.type || 'Security Violation'}
-                                      {sortedViolations.length > 1 && ` (+${sortedViolations.length - 1} more)`}
-                                    </h4>
-                                  </div>}
-                              </div>
-                             <div className="text-red-600 hover:text-red-800 transition-colors">
-                               {expandedViolations.has(event.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                             </div>
-                           </div>
-                           
-                           {/* Show all violations sorted by severity when expanded */}
-                           {expandedViolations.has(event.id) && <div className="space-y-3">
-                               {sortedViolations.map((detection, idx) => <div key={idx} className="border-l-2 border-red-300 pl-3 space-y-2">
-                                   
-                                   
-                                    {detection.violation_confidence && <div className="text-xs text-red-700">
-                                        <span className="font-medium">Confidence:</span> {detection.violation_confidence.toFixed(2)}
-                                      </div>}
-                                   
-                                   {detection.violation_description && <div className="text-xs text-red-700">
-                                       <span className="font-medium">Description:</span> {detection.violation_description}
-                                     </div>}
-                                   
-                                   <button onClick={e => {
-                          e.stopPropagation();
-                          const violationId = detection.id || detection.violation_id || detection.detection_id;
-                          navigate(`/violations/${violationId}`);
-                        }} className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 hover:underline mt-2">
-                                     <ExternalLink className="h-3 w-3" />
-                                     Investigate violation
-                                   </button>
-                                 </div>)}
-                             </div>}
-                         </div>;
-                })()}
+                  return <div className="mt-3 space-y-2">
+                    {sortedViolations.map((detection, idx) => {
+                      const violationKey = `${event.id}-violation-${idx}`;
+                      const isExpanded = expandedViolations.has(violationKey);
+                      
+                      return <div key={idx} className="p-3 bg-red-50 border border-red-200 rounded-lg cursor-pointer hover:bg-red-100 transition-colors" onClick={e => {
+                        e.stopPropagation();
+                        toggleViolationExpansion(violationKey);
+                      }}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle className="h-4 w-4 text-red-600" />
+                            <div className="flex items-center gap-2">
+                              <Badge variant="destructive" className={`text-xs ${detection.severity === 'critical' ? 'bg-red-600' : detection.severity === 'high' ? 'bg-red-500' : detection.severity === 'medium' ? 'bg-orange-500' : 'bg-yellow-500'}`}>
+                                {detection.severity?.toUpperCase()}
+                              </Badge>
+                              <h4 className="text-sm font-medium text-red-800">
+                                {detection.violation_name || detection.detection_type?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || 'Security Violation'}
+                              </h4>
+                            </div>
+                          </div>
+                          <div className="text-red-600 hover:text-red-800 transition-colors">
+                            {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                          </div>
+                        </div>
+                        
+                        {/* Show violation details when expanded */}
+                        {isExpanded && <div className="mt-3 border-l-2 border-red-300 pl-3 space-y-2">
+                          {detection.violation_confidence && <div className="text-xs text-red-700">
+                            <span className="font-medium">Confidence:</span> {detection.violation_confidence.toFixed(2)}
+                          </div>}
+                          
+                          {detection.violation_description && <div className="text-xs text-red-700">
+                            <span className="font-medium">Description:</span> {detection.violation_description}
+                          </div>}
+                          
+                          {detection.context && <div className="text-xs text-red-700">
+                            <span className="font-medium">Context:</span> {detection.context}
+                          </div>}
+                          
+                          {detection.matches && detection.matches.length > 0 && <div className="text-xs text-red-700">
+                            <span className="font-medium">Matches:</span> {detection.matches.join(', ')}
+                          </div>}
+                          
+                          <button onClick={e => {
+                            e.stopPropagation();
+                            const violationId = detection.id || detection.violation_id || detection.detection_id;
+                            navigate(`/violations/${violationId}`);
+                          }} className="flex items-center gap-1 text-xs text-red-600 hover:text-red-800 hover:underline mt-2">
+                            <ExternalLink className="h-3 w-3" />
+                            Investigate violation
+                          </button>
+                        </div>}
+                      </div>;
+                    })}
+                  </div>;
+                 })()}
                      
                      {event.type === 'handoff' && event.details && <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-xs">
                           <div className="flex items-center gap-2 mb-1">
