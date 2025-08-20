@@ -30,9 +30,12 @@ const EventFeed: React.FC<EventFeedProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Add keyboard navigation
+  // Filter out violation events for display (they're shown inline with their parent events)
+  const displayEvents = events.filter(event => event.type !== 'violation');
+
   useKeyboardNavigation({
     onNext: () => {
-      if (currentEventIndex < events.filter(event => event.type !== 'violation').length - 1) {
+      if (currentEventIndex < displayEvents.length - 1) {
         onEventClick(currentEventIndex + 1);
       }
     },
@@ -165,7 +168,7 @@ const EventFeed: React.FC<EventFeedProps> = ({
       <div className="p-4 border-b border-border bg-card flex-shrink-0">
         <h2 className="text-lg font-semibold">Event Feed</h2>
         <p className="text-sm text-muted-foreground">
-          {events.length} events • Currently at event {currentEventIndex + 1}
+          {displayEvents.length} events • Currently at event {currentEventIndex + 1}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
           Use ← → arrow keys to navigate events
@@ -173,7 +176,7 @@ const EventFeed: React.FC<EventFeedProps> = ({
       </div>
       
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
-        {events.filter(event => event.type !== 'violation').map((event, index) => {
+        {displayEvents.map((event, index) => {
         const colorClass = getAgentColorClass(event.agent);
         const isActive = index === currentEventIndex;
         const isPast = index <= currentEventIndex;
