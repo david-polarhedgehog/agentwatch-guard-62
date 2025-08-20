@@ -171,6 +171,7 @@ export function processSessionData(sessionData: ApiSessionResponse): {
           type: 'agent_response',
           agent: AgentNameService.getCachedAgentName(agentResponse.agent_id || agentResponse.agent) || getCleanAgentName(agentResponse.agent_id || agentResponse.agent),
           agent_id: agentResponse.agent_id || agentResponse.agent, // Store agent_id for graph building
+          outer_agent_id: agentResponse.outer_agent_id || agentResponse.outer_agent, // Store outer_agent_id for graph edge construction
           content: agentResponse.response,
           duration: agentResponse.duration_seconds,
           detections: responseDetections,

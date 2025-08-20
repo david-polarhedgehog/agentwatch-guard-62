@@ -101,10 +101,11 @@ const MultiAgentFlowComponent: React.FC<MultiAgentFlowProps> = ({ events, curren
     nonViolationEvents.forEach((event, index) => {
       switch (event.type) {
         case 'user_message':
-          // User -> Outer Agent (forward direction)
+          // User -> Outer Agent (forward direction) - only use outer_agent_id
           const nextAgentResponse = nonViolationEvents.slice(index + 1).find(e => e.type === 'agent_response');
           if (nextAgentResponse) {
-            const outerAgent = handoffMap.get(nextAgentResponse.agent) || nextAgentResponse.agent;
+            // Use outer_agent_id for user connections as specified
+            const outerAgent = nextAgentResponse.outer_agent_id || nextAgentResponse.agent;
             addConnection('user-outer', 'User', outerAgent, index, 'user_message', 'forward');
           }
           break;
@@ -131,16 +132,18 @@ const MultiAgentFlowComponent: React.FC<MultiAgentFlowProps> = ({ events, curren
           break;
 
         case 'agent_response':
-          // Response follows the reverse path: Actual Agent -> Outer Agent -> User
-          const outerAgent = handoffMap.get(event.agent);
-          if (outerAgent) {
+          // Response follows the reverse path: Use outer_agent_id for user connections
+          const responseOuterAgent = event.outer_agent_id || event.agent;
+          const handoffOuterAgent = handoffMap.get(event.agent);
+          
+          if (handoffOuterAgent && event.agent_id) {
             // Actual Agent -> Outer Agent (backward direction)
-            addConnection('outer-actual', outerAgent, event.agent, index, 'agent_response', 'backward');
-            // Outer Agent -> User (backward direction)
-            addConnection('user-outer', 'User', outerAgent, index, 'agent_response', 'backward');
+            addConnection('outer-actual', handoffOuterAgent, event.agent, index, 'agent_response', 'backward');
+            // Outer Agent -> User (backward direction) - use outer_agent_id
+            addConnection('user-outer', 'User', responseOuterAgent, index, 'agent_response', 'backward');
           } else {
-            // Direct response: Agent -> User (backward direction)
-            addConnection('user-outer', 'User', event.agent, index, 'agent_response', 'backward');
+            // Direct response: Outer Agent -> User (backward direction) - use outer_agent_id
+            addConnection('user-outer', 'User', responseOuterAgent, index, 'agent_response', 'backward');
           }
           break;
       }

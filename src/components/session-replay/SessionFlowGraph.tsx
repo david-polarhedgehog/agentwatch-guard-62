@@ -48,20 +48,25 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     // Filter out violation events for flow analysis
     const nonViolationEvents = events.filter(event => event.type !== 'violation');
     
-    // Build response index by request_id and derive primary agent from earliest response
-    const respByReq = new Map<string, { agentId: string; index: number }>();
+    // Build response index by request_id using outer_agent_id for user connections
+    const respByReq = new Map<string, { outerAgentId: string; index: number }>();
 
     nonViolationEvents.forEach((event, index) => {
       if (event.type === 'agent_response' && event.request_id) {
-        const agentId = event.agent_id || event.agent;
-        respByReq.set(event.request_id, { agentId, index });
-        flow.agents.set(agentId, event.agent); // ensure agent node exists
+        // Use outer_agent_id for user connections as specified
+        const outerAgentId = event.outer_agent_id || event.agent;
+        respByReq.set(event.request_id, { outerAgentId, index });
+        // Add both outer agent and actual agent to nodes
+        flow.agents.set(outerAgentId, event.outer_agent_id || event.agent);
+        if (event.agent_id && event.agent_id !== outerAgentId) {
+          flow.agents.set(event.agent_id, event.agent);
+        }
       }
     });
 
-    // primary agent = earliest responding agent by index
+    // primary agent = earliest responding outer agent by index
     const primaryAgent = respByReq.size > 0
-      ? Array.from(respByReq.values()).sort((a, b) => a.index - b.index)[0].agentId
+      ? Array.from(respByReq.values()).sort((a, b) => a.index - b.index)[0].outerAgentId
       : null;
 
     nonViolationEvents.forEach((event, index) => {
@@ -69,8 +74,9 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         case 'user_message': {
           const rec = event.request_id ? respByReq.get(event.request_id) : undefined;
           if (rec) {
+            // Only create user → outer_agent_id edges as specified
             flow.userInteractions.push({
-              agent: rec.agentId,
+              agent: rec.outerAgentId,
               eventIndex: index,
               type: 'request',
             });
@@ -78,9 +84,10 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           break;
         }
         case 'agent_response': {
-          const agentId = event.agent_id || event.agent;
+          // Only create user → outer_agent_id edges, not agent_id
+          const outerAgentId = event.outer_agent_id || event.agent;
           flow.userInteractions.push({
-            agent: agentId,
+            agent: outerAgentId,
             eventIndex: index,
             type: 'response',
           });
@@ -287,14 +294,14 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
     const edges: Edge[] = [];
     const currentEvent = events[currentEventIndex];
 
-    // Build response index for arrow logic (reuse from sessionFlow)
-    const respByReqForArrows = new Map<string, { agentId: string; index: number }>();
+    // Build response index for arrow logic using outer_agent_id
+    const respByReqForArrows = new Map<string, { outerAgentId: string; index: number }>();
     const eventsForArrows = events.filter(event => event.type !== 'violation');
     
     eventsForArrows.forEach((event, index) => {
       if (event.type === 'agent_response' && event.request_id) {
-        const agentId = event.agent_id || event.agent;
-        respByReqForArrows.set(event.request_id, { agentId, index });
+        const outerAgentId = event.outer_agent_id || event.agent;
+        respByReqForArrows.set(event.request_id, { outerAgentId, index });
       }
     });
 
@@ -305,12 +312,12 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
       switch (currentEvent.type) {
         case 'user_message': {
           const rec = currentEvent.request_id ? respByReqForArrows.get(currentEvent.request_id) : undefined;
-          const targetAgent = rec?.agentId;
+          const targetAgent = rec?.outerAgentId;
           return edgeType === 'user_interaction' && sourceId === 'User' && targetId === targetAgent;
         }
         case 'agent_response':
           return edgeType === 'user_interaction' &&
-                 sourceId === (currentEvent.agent_id || currentEvent.agent) &&
+                 sourceId === (currentEvent.outer_agent_id || currentEvent.agent) &&
                  targetId === 'User';
         case 'tool_call':
           return edgeType === 'tool_call' &&

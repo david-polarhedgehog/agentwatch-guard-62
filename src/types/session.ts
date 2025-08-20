@@ -43,6 +43,7 @@ export interface AgentResponse {
   response: string;
   duration_seconds: number;
   outer_agent: string;
+  outer_agent_id: string; // Add outer_agent_id field to match API response
   handoff_occurred: boolean;
   tools_used: ToolUsage[];
   request_id: string;
@@ -105,6 +106,7 @@ export interface ProcessedEvent {
   type: 'user_message' | 'agent_response' | 'handoff' | 'tool_call' | 'violation';
   agent: string;
   agent_id?: string; // Add agent_id for proper graph node keying
+  outer_agent_id?: string; // Add outer_agent_id for graph edge construction
   content: string;
   duration?: number;
   detections?: any[]; // Security violations/detections for this event
