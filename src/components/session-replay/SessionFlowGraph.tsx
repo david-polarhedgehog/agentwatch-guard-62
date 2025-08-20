@@ -16,6 +16,23 @@ import {
 import '@xyflow/react/dist/style.css';
 import { ProcessedEvent } from '@/types/session';
 import { getAgentColorClass } from '@/utils/sessionProcessor';
+import { AgentNameService } from '@/services/agentNameService';
+
+// Import the getCleanAgentName function from sessionProcessor
+const getCleanAgentName = (agentId: string): string => {
+  // Convert agent IDs to readable names (fallback for when API names are not available)
+  if (agentId.includes('Customer Service Agent') || agentId.includes('customer_service')) return 'Customer Service Agent';
+  if (agentId.includes('File System Agent') || agentId.includes('file_system')) return 'File System Agent';
+  if (agentId.includes('Web Search Agent') || agentId.includes('web_search')) return 'Web Search Agent';
+  if (agentId.includes('summarizer')) return 'Summarizer Agent';
+  
+  // Generic cleanup for unknown agent types
+  return agentId
+    .replace(/^agent_/, '') // Remove agent_ prefix
+    .replace(/_agent_[a-f0-9]+$/, '') // Remove _agent_<hash> suffix
+    .replace(/_/g, ' ') // Replace underscores with spaces
+    .replace(/\b\w/g, (l: string) => l.toUpperCase()); // Title case
+};
 
 interface SessionFlowGraphProps {
   events: ProcessedEvent[];
@@ -56,10 +73,12 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         // Use outer_agent_id for user connections as specified
         const outerAgentId = event.outer_agent_id || event.agent;
         respByReq.set(event.request_id, { outerAgentId, index });
-        // Add both outer agent and actual agent to nodes
-        flow.agents.set(outerAgentId, event.outer_agent_id || event.agent);
+        // Add both outer agent and actual agent to nodes - use proper name resolution
+        const outerAgentName = AgentNameService.getCachedAgentName(outerAgentId) || getCleanAgentName(outerAgentId);
+        flow.agents.set(outerAgentId, outerAgentName); // Use resolved agent name for display
         if (event.agent_id && event.agent_id !== outerAgentId) {
-          flow.agents.set(event.agent_id, event.agent);
+          const actualAgentName = AgentNameService.getCachedAgentName(event.agent_id) || getCleanAgentName(event.agent_id);
+          flow.agents.set(event.agent_id, actualAgentName); // Use resolved agent name
         }
       }
     });
@@ -97,8 +116,13 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
         case 'handoff':
           // Agent is handing off to another agent - use agent_ids for node keys
           if (event.details?.from_agent_id && event.details?.to_agent_id) {
-            flow.agents.set(event.details.from_agent_id, event.details.from_agent || event.details.from_agent_id);
-            flow.agents.set(event.details.to_agent_id, event.details.to_agent || event.details.to_agent_id);
+            const fromAgentName = AgentNameService.getCachedAgentName(event.details.from_agent_id) || 
+                                 event.details.from_agent || getCleanAgentName(event.details.from_agent_id);
+            const toAgentName = AgentNameService.getCachedAgentName(event.details.to_agent_id) || 
+                               event.details.to_agent || getCleanAgentName(event.details.to_agent_id);
+            
+            flow.agents.set(event.details.from_agent_id, fromAgentName);
+            flow.agents.set(event.details.to_agent_id, toAgentName);
             flow.handoffs.push({
               from: event.details.from_agent_id,
               to: event.details.to_agent_id,
@@ -111,7 +135,11 @@ const SessionFlowGraphComponent: React.FC<SessionFlowGraphProps> = ({ events, cu
           // Agent is using a tool (tools are NOT separate agents) - use agent_id for keying
           if (event.agent !== 'User' && event.details?.tool_name) {
             const agentId = event.agent_id || event.agent;
-            flow.agents.set(agentId, event.agent);
+            // Only set agent name if we have an actual agent_id (not just the name)
+            if (event.agent_id) {
+              const agentName = AgentNameService.getCachedAgentName(event.agent_id) || getCleanAgentName(event.agent_id);
+              flow.agents.set(agentId, agentName); // agentId is the ID, use resolved name
+            }
             flow.tools.set(event.details.tool_name, agentId);
             flow.toolCalls.push({
               agent: agentId,
