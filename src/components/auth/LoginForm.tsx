@@ -50,7 +50,7 @@ export function LoginForm() {
             Sign In
           </CardTitle>
           <CardDescription className="text-center">
-            Enter your credentials to access the dashboard
+            Enter your credentials to access the AI Security Dashboard
           </CardDescription>
         </CardHeader>
         <CardContent>
