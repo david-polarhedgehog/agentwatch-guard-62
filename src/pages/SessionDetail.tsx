@@ -314,11 +314,22 @@ export default function SessionDetail() {
               </div>
             </div>
             
-            <div className="bg-background rounded-lg border border-border p-3 flex items-center gap-3">
-              <Bot className="h-5 w-5 text-primary" />
+            <div className="bg-background rounded-lg border border-border p-3 flex items-start gap-3">
+              <Bot className="h-5 w-5 text-primary mt-1" />
               <div className="flex-1 min-w-0">
-                <div className="text-lg font-semibold">{involvedAgents.length}</div>
-                <div className="text-xs text-muted-foreground">Agents</div>
+                <div className="text-xs text-muted-foreground mb-2">Agents ({involvedAgents.length})</div>
+                <div className="flex flex-wrap gap-1">
+                  {involvedAgents.map((agent) => (
+                    <Badge 
+                      key={agent.id}
+                      variant="secondary"
+                      className={agent.className}
+                      onClick={() => navigate(`/agents/${agent.id}`)}
+                    >
+                      {agent.name}
+                    </Badge>
+                  ))}
+                </div>
               </div>
             </div>
             
